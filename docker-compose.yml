@@ -1,0 +1,13 @@
+version: '3'
+services:
+  db:
+    image: mysql:latest
+    container_name: server_mysql
+    ports:
+      - 3306:3306
+    restart: on-failure
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: search_engine
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 123456
