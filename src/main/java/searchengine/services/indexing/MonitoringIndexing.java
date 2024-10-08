@@ -25,6 +25,9 @@ public class MonitoringIndexing implements MonitoringService {
     int completedTasks = 0;
     int countSites = siteService.getAllSites().size();
     while(completedTasks != countSites)
+        if(IndexingService.isIndexingStopped.get()) {
+            break;
+        };
         for (Future<?> future : results) {
             try {
                 if (future.isDone()) {
