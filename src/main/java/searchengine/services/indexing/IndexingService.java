@@ -10,5 +10,5 @@ public interface IndexingService<Che> {
     IndexindResponse startIndexingAllSites();
     IndexindResponse stopIndexingAllSites();
     void indexing();
-    boolean startIndexingPage();
+    IndexindResponse startIndexingPage(String url);
 }
