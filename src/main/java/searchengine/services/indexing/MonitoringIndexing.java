@@ -28,7 +28,7 @@ public class MonitoringIndexing implements MonitoringService {
         if(IndexingService.isIndexingStopped.get()) {
             break;
         };
-        for (Future<?> future : results) {
+        for (Future<String> future : results) {
             try {
                 if (future.isDone()) {
                     log.info("Результат future get - " + future.get());
