@@ -12,11 +12,6 @@ public class SubmitPool implements Callable<String> {
     private ForkJoinPool pool;
     private PageProcessor task;
 
-//    @Override
-//    public void run() {
-//        runPool(pool, task);
-//    }
-
     private String runPool(ForkJoinPool pool, PageProcessor task) throws RejectedExecutionException, ExecutionException, InterruptedException {
         pool.invoke(task);
         pool.shutdown();
