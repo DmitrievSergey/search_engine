@@ -4,24 +4,28 @@ import lombok.AllArgsConstructor;
 import searchengine.services.scrabbing.PageProcessor;
 
 
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.*;
 
 
 @AllArgsConstructor
-public class SubmitPool implements Runnable {
-    private ForkJoinPool pool = new ForkJoinPool();
-    private ForkJoinTask<?> task;
+public class SubmitPool implements Callable<String> {
+    private ForkJoinPool pool;
+    private PageProcessor task;
 
-    @Override
-    public void run() {
-        runPool(pool, task);
-    }
+//    @Override
+//    public void run() {
+//        runPool(pool, task);
+//    }
 
-    private void runPool(ForkJoinPool pool, ForkJoinTask<?> task) throws RejectedExecutionException {
+    private String runPool(ForkJoinPool pool, PageProcessor task) throws RejectedExecutionException, ExecutionException, InterruptedException {
         pool.invoke(task);
         pool.shutdown();
 
+        return task.getUrl();
+    }
+
+    @Override
+    public String call() throws Exception {
+        return runPool(pool, task);
     }
 }

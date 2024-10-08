@@ -29,6 +29,11 @@ public class SiteServiceImpl implements SiteService<SiteEntity> {
     }
 
     @Override
+    public SiteEntity findSiteByUrl(String url) {
+        return siteRepository.findSiteByUrl(url);
+    }
+
+    @Override
     public void deleteAllSites() {
         siteRepository.deleteAll();
     }

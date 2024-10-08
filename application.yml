@@ -38,12 +38,8 @@ logging:
 
 indexing-settings:
   siteConfigs:
-    - url: https://volochek.life/
-      name: Вышний Волочёк
-    - url: https://www.playback.ru/
-      name: PlayBack.Ru
-    - url: https://ipfran.ru/
-      name: ИПФ РАН
+    - url: https://automationpanda.com/
+      name: Panda
 
 jsoup-settings:
   timeout: 10000

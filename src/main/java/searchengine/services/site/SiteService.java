@@ -14,5 +14,7 @@ public interface SiteService<SiteEntity> {
 
     List<SiteEntity> getAllSites ();
 
+    SiteEntity findSiteByUrl(String url);
+
     void deleteAllSites();
 }
