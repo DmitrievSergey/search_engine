@@ -138,12 +138,8 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     @Override
-    public IndexindResponse startIndexingPage(String url) {
-        // TODO: Проверить что переданный параметр является ссылкой
-        // TODO: Проверть, что host есть в конфиг файле или бд
-        // TODO: Проверить наличие ссылки в бд
-        // TODO: Если ссылка есть в бд - получить с сайта данные по странице, удалить данные из бд, записать новые данные в бд
-        return new IndexindResponse(true, null);
+    public boolean startIndexingPage() {
+        return false;
     }
 
     private void addSites() {
