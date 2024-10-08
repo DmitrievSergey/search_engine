@@ -58,11 +58,6 @@ public class ScrubbingServiceImpl implements ScrubbingService {
         Connection connection = null;
         Document document = null;
         Set<String> pageUrls = new HashSet<>();
-        if (IndexingServiceImpl.isIndexingStopped.get()) {
-            log.info("Индексация останавливается " + IndexingServiceImpl.isIndexingStopped.get());
-            log.info("размер pageUrls " + pageUrls.size());
-            return pageUrls;
-        }
 
         try {
             connection = connectToPage(String.valueOf(checkLinkService.getUrl(url)));
@@ -73,6 +68,11 @@ public class ScrubbingServiceImpl implements ScrubbingService {
             }
             pageService.saveSitePage(new PageEntity(site, checkLinkService.getPath(url)
                     , document.outerHtml(), connection.response().statusCode()));
+            if (IndexingServiceImpl.isIndexingStopped.get()) {
+                log.info("Индексация останавливается " + IndexingServiceImpl.isIndexingStopped.get());
+                log.info("размер pageUrls " + pageUrls.size());
+                return pageUrls;
+            }
             List<CheckLinkEntity> list = new ArrayList<>();
             Elements elements = document.select("a[href^=/]");
             for (Element element : elements) {

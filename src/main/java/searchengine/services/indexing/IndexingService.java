@@ -9,6 +9,5 @@ public interface IndexingService<Che> {
     public static AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
     IndexindResponse startIndexingAllSites();
     IndexindResponse stopIndexingAllSites();
-    void indexing();
     boolean startIndexingPage();
 }
