@@ -8,5 +8,6 @@ import lombok.Setter;
 public class SiteConfig {
     private String url;
     private String name;
+    private String workDir;
 
 }

@@ -1,6 +1,5 @@
 package searchengine.services.indexing;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +12,10 @@ import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.services.checklink.CheckLinkService;
+import searchengine.services.jsoup.JsoupService;
 import searchengine.services.page.PageService;
+import searchengine.services.scrabbing.FileService;
 import searchengine.services.scrabbing.PageProcessor;
-import searchengine.services.scrabbing.ScrubbingService;
 import searchengine.services.site.SiteService;
 
 import java.time.LocalDateTime;
@@ -33,7 +33,7 @@ public class IndexingServiceImpl implements IndexingService {
     private SitesList sitesList;
     private MonitoringService monitoringService;
     private SiteService<SiteEntity> siteService;
-    private ScrubbingService scrubbingService;
+    private JsoupService jsoupService;
     private CheckLinkService<CheckLinkEntity> checkLinkService;
     private PageService<PageEntity> pageService;
     private List<ForkJoinPool> listOfPools = new ArrayList<>();
@@ -42,18 +42,20 @@ public class IndexingServiceImpl implements IndexingService {
     private List<Thread> threads = new ArrayList<>();
     public static AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
     private final int cores = Runtime.getRuntime().availableProcessors();
-    ExecutorService executorService;
+    ExecutorService poolExecutor;
+    ScheduledExecutorService monitoringExecutor = Executors.newSingleThreadScheduledExecutor();
+    ScheduledFuture<?> monitoringResult;
 
 
     public IndexingServiceImpl(MonitoringService monitoringService, SitesList sitesList, CheckLinkService<CheckLinkEntity> checkLinkService
             , PageService<PageEntity> pageService, SiteService<SiteEntity> siteService
-            , ScrubbingService scrubbingService) {
+            , JsoupService jsoupService) {
         this.monitoringService = monitoringService;
         this.sitesList = sitesList;
         this.checkLinkService = checkLinkService;
         this.pageService = pageService;
         this.siteService = siteService;
-        this.scrubbingService = scrubbingService;
+        this.jsoupService = jsoupService;
     }
 
 
@@ -75,18 +77,19 @@ public class IndexingServiceImpl implements IndexingService {
 
         addSites();
         final int countOfSites = siteService.getAllSites().size();
-        executorService = Executors.newFixedThreadPool(countOfSites + 1);
+        poolExecutor = Executors.newFixedThreadPool(countOfSites + 1);
+
         try {
 
             siteService.getAllSites().forEach(site -> {
                         String path = checkLinkService.getPath(site.getUrl());
                         ForkJoinPool pool = new ForkJoinPool();
-                        PageProcessor task = new PageProcessor(scrubbingService, checkLinkService
+                        PageProcessor task = new PageProcessor(jsoupService, checkLinkService
                                 , pageService, site.getUrl(), site);
                         tasks.add(task);
                         listOfPools.add(pool);
                         SubmitPool submitPool = new SubmitPool(pool, task);
-                        Future<String> future = executorService.submit(submitPool);
+                        Future<String> future = poolExecutor.submit(submitPool);
                         results.add(future);
                         site.setStatus(Status.INDEXING);
                         site.setStatusTime(LocalDateTime.now());
@@ -96,8 +99,10 @@ public class IndexingServiceImpl implements IndexingService {
                     }
             );
             MonitoringIndexing monitoring = new MonitoringIndexing(siteService, results);
-            executorService.execute(monitoring);
-            executorService.shutdown();
+            monitoringResult = monitoringExecutor.scheduleAtFixedRate(monitoring, 1, 1, TimeUnit.SECONDS);
+
+            poolExecutor.shutdown();
+//            monitoringExecutor.shutdown();
             return new IndexindResponse(true, null);
         } catch (Exception e) {
             siteService.getAllSites().forEach(site -> {
@@ -112,14 +117,14 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse stopIndexingAllSites() {
-        if (executorService == null) return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
+        if (poolExecutor == null) return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
         if (siteService.getAllSites().isEmpty()) {
             return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
         }
         if (!isIndexingStopped.get()) {
             isIndexingStopped.set(true);
         }
-        if (executorService.isShutdown()) {
+        if (poolExecutor.isShutdown()) {
             log.info("Инициирован подрыв основной базы");
         }
 

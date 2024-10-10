@@ -15,7 +15,13 @@ public interface CheckLinkService<CheckLinkEntity> {
 
     void deleteAll();
 
-    boolean isValid(String url, SiteEntity site);
+    boolean isValid(String url, String baseUrl, SiteEntity site);
+
     String getPath(String url);
+
     URL getUrl(String url);
+
+    String getHost(String url);
+
+    String nameFromUrl(String url);
 }

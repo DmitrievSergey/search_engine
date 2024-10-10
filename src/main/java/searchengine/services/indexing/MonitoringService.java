@@ -5,6 +5,8 @@ import searchengine.services.site.SiteService;
 
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 
 
 public interface MonitoringService extends Runnable {

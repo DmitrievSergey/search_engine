@@ -10,6 +10,7 @@ import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.checklink.CheckLinkService;
 import searchengine.services.indexing.IndexingService;
+import searchengine.services.jsoup.JsoupService;
 import searchengine.services.page.PageService;
 
 
@@ -23,15 +24,15 @@ import static java.lang.Integer.compare;
 @Setter
 
 public class PageProcessor extends RecursiveTask<List<String>> implements Comparable<PageProcessor> {
-    private final ScrubbingService scrubbingService;
+    private final JsoupService jsoupService;
     private final CheckLinkService<CheckLinkEntity> checkLinkService;
     private final PageService<PageEntity> pageService;
     private String url;
     private final SiteEntity site;
 
-    public PageProcessor(ScrubbingService scrubbingService, CheckLinkService<CheckLinkEntity> checkLinkService,
+    public PageProcessor(JsoupService jsoupService, CheckLinkService<CheckLinkEntity> checkLinkService,
                          PageService<PageEntity> pageService, String url, SiteEntity site) {
-        this.scrubbingService = scrubbingService;
+        this.jsoupService = jsoupService;
         this.checkLinkService = checkLinkService;
         this.pageService = pageService;
         this.site = site;
@@ -52,11 +53,11 @@ public class PageProcessor extends RecursiveTask<List<String>> implements Compar
     protected List<String> compute() {
         List<String> resultList;
         try {
-            Set<String> childLinks = scrubbingService.getPageLinks(url, site);
+            Set<String> childLinks = jsoupService.getUrlsSetFromUrl(url, site);
             Set<PageProcessor> taskList = new TreeSet<>();
             resultList = new ArrayList<>();
             for (String child : childLinks) {
-                PageProcessor task = new PageProcessor(scrubbingService, checkLinkService, pageService, child, site);
+                PageProcessor task = new PageProcessor(jsoupService, checkLinkService, pageService, child, site);
                 taskList.add(task);
             }
 

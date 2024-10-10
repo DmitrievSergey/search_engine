@@ -38,8 +38,9 @@ logging:
 
 indexing-settings:
   siteConfigs:
-    - url: https://automationpanda.com/
-      name: Panda
+    - url: https://www.playback.ru/
+      name: PlayBack.Ru
+      workDir: /PlayBack
 
 jsoup-settings:
   timeout: 10000

@@ -11,6 +11,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,24 +43,26 @@ public class CheckLinkServiceImpl implements CheckLinkService<CheckLinkEntity> {
     }
 
     @Override
-    public boolean isValid(String url, SiteEntity site) {
+    public boolean isValid(String page, String baseUrl, SiteEntity site) {
         URL pageUrl;
         URL siteUrl;
         try {
-            pageUrl = getUrl(url);
+            pageUrl = getUrl(page);
             siteUrl = getUrl(site.getUrl());
             if (! checkProtocol(pageUrl.getProtocol())) {
                 log.info("Кривой протокол у урла " + pageUrl);
                 return false;
             }
             if (! pageUrl.getHost().equals(siteUrl.getHost())) return false;
+            if (! pageUrl.toString().contains(baseUrl)) return false;
             if ( checkFileExtension(pageUrl.getPath())) return false;
         } catch (NullPointerException | IllegalArgumentException  e) {
             e.printStackTrace();
-            log.info(" Кривой URI " + url);
+            log.info(" Кривой URI " + page);
             return false;
         }
         return true;
+
     }
 
     @Override
@@ -72,14 +75,32 @@ public class CheckLinkServiceImpl implements CheckLinkService<CheckLinkEntity> {
         return null;
     }
 
+
     @Override
     public URL getUrl(String url) {
         try {
             return new URI(url).toURL();
         } catch (URISyntaxException | MalformedURLException e) {
             e.printStackTrace();
+            log.info(" Кривой урл - " + url);
         }
         return null;
+    }
+
+    @Override
+    public String nameFromUrl(String url) {
+        URL pageUrl = getUrl(url);
+        StringBuilder b = new StringBuilder();
+        for(String string: pageUrl.getHost().split("\\.")) {
+            b.append(string);
+        }
+        return b.toString();
+    }
+
+    @Override
+    public String getHost(String url) {
+        URL pageUrl = getUrl(url);
+        return pageUrl.getHost();
     }
 
     private boolean checkProtocol(String url) {

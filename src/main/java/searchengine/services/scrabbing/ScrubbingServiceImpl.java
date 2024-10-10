@@ -66,8 +66,8 @@ public class ScrubbingServiceImpl implements ScrubbingService {
             if (document == null) {
                 return pageUrls;
             }
-            pageService.saveSitePage(new PageEntity(site, checkLinkService.getPath(url)
-                    , document.outerHtml(), connection.response().statusCode()));
+//            pageService.saveSitePage(new PageEntity(site, checkLinkService.getPath(url)
+//                    , document.outerHtml(), connection.response().statusCode()));
             if (IndexingServiceImpl.isIndexingStopped.get()) {
                 log.info("Индексация останавливается " + IndexingServiceImpl.isIndexingStopped.get());
                 log.info("размер pageUrls " + pageUrls.size());
@@ -77,7 +77,7 @@ public class ScrubbingServiceImpl implements ScrubbingService {
             Elements elements = document.select("a[href^=/]");
             for (Element element : elements) {
                 String link = element.absUrl("href");
-                if (!checkLinkService.isValid(link, site)) continue;
+                if (!checkLinkService.isValid(link, document.baseUri(), site)) continue;
                 String path = checkLinkService.getPath(link);
                 CheckLinkEntity checkLink = new CheckLinkEntity(path, site);
                 if (list.contains(checkLink)) continue;
