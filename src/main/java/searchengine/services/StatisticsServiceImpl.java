@@ -14,11 +14,14 @@ import java.util.List;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
 
     private final Random random = new Random();
     private final SitesList sites;
+
+    public StatisticsServiceImpl(SitesList sites) {
+        this.sites = sites;
+    }
 
     @Override
     public StatisticsResponse getStatistics() {

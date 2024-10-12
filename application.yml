@@ -35,12 +35,12 @@ logging:
           descriptor:
             sql:
               BasicBinder: OFF
-
 indexing-settings:
   siteConfigs:
     - url: https://www.playback.ru/
       name: PlayBack.Ru
-      workDir: /PlayBack
+    - url: https://sendel.ru
+      name: Sendel
 
 jsoup-settings:
   timeout: 10000

@@ -25,16 +25,11 @@ import static java.lang.Integer.compare;
 
 public class PageProcessor extends RecursiveTask<List<String>> implements Comparable<PageProcessor> {
     private final JsoupService jsoupService;
-    private final CheckLinkService<CheckLinkEntity> checkLinkService;
-    private final PageService<PageEntity> pageService;
     private String url;
     private final SiteEntity site;
 
-    public PageProcessor(JsoupService jsoupService, CheckLinkService<CheckLinkEntity> checkLinkService,
-                         PageService<PageEntity> pageService, String url, SiteEntity site) {
+    public PageProcessor(JsoupService jsoupService, String url, SiteEntity site) {
         this.jsoupService = jsoupService;
-        this.checkLinkService = checkLinkService;
-        this.pageService = pageService;
         this.site = site;
         this.url = url.toLowerCase();
     }
@@ -57,7 +52,7 @@ public class PageProcessor extends RecursiveTask<List<String>> implements Compar
             Set<PageProcessor> taskList = new TreeSet<>();
             resultList = new ArrayList<>();
             for (String child : childLinks) {
-                PageProcessor task = new PageProcessor(jsoupService, checkLinkService, pageService, child, site);
+                PageProcessor task = new PageProcessor(jsoupService, child, site);
                 taskList.add(task);
             }
 

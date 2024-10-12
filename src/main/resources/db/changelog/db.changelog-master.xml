@@ -32,7 +32,7 @@
             <constraints primaryKey="true" nullable="false"/>
         </column>
         <column name="site_id" type="INT">
-            <constraints nullable="false" foreignKeyName="fk_site_id" references="site(id)" deleteCascade="true"/>
+            <constraints nullable="false" foreignKeyName="fk_site_id_page" references="site(id)" deleteCascade="true"/>
         </column>
         <column name="path" type="TEXT">
             <constraints nullable="false"/>
@@ -61,6 +61,42 @@
     </createTable>
     <addAutoIncrement tableName="link" columnName="id" columnDataType="INT"/>
     <sql>create unique index path_id_link on link (site_id, path(255)) using BTREE</sql>
+
+
+    <createTable tableName="lemma">
+        <column name="id" type="INT">
+            <constraints primaryKey="true" nullable="false"/>
+        </column>
+        <column name="site_id" type="INT">
+            <constraints nullable="false" foreignKeyName="fk_site_id_lemma" references="site(id)" deleteCascade="true"/>
+        </column>
+        <column name="lemma" type="VARCHAR(255)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="frequency" type="INT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="content" type="MEDIUMTEXT">
+            <constraints nullable="false"/>
+        </column>
+    </createTable>
+    <addAutoIncrement tableName="lemma" columnName="id" columnDataType="INT"/>
+
+    <createTable tableName="index">
+        <column name="id" type="INT">
+            <constraints primaryKey="true" nullable="false"/>
+        </column>
+        <column name="page_id" type="INT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="lemma_id" type="INT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="rank" type="FLOAT">
+            <constraints nullable="false"/>
+        </column>
+    </createTable>
+    <addAutoIncrement tableName="index" columnName="id" columnDataType="INT"/>
     </changeSet>
 
 </databaseChangeLog>

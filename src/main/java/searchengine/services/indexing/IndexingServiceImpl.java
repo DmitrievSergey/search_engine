@@ -3,6 +3,7 @@ package searchengine.services.indexing;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteConfig;
 import searchengine.config.SitesList;
@@ -30,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Setter
 public class IndexingServiceImpl implements IndexingService {
 
-    private SitesList sitesList;
+    private final SitesList sitesList;
     private MonitoringService monitoringService;
     private SiteService<SiteEntity> siteService;
     private JsoupService jsoupService;
@@ -39,12 +40,12 @@ public class IndexingServiceImpl implements IndexingService {
     private List<ForkJoinPool> listOfPools = new ArrayList<>();
     private List<Future<String>> results = new ArrayList<>();
     private List<PageProcessor> tasks = new ArrayList<>();
-    private List<Thread> threads = new ArrayList<>();
-    public static AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
+
+
     private final int cores = Runtime.getRuntime().availableProcessors();
     ExecutorService poolExecutor;
     ScheduledExecutorService monitoringExecutor = Executors.newSingleThreadScheduledExecutor();
-    ScheduledFuture<?> monitoringResult;
+    ScheduledFuture<?> monitoringResult = null;
 
 
     public IndexingServiceImpl(MonitoringService monitoringService, SitesList sitesList, CheckLinkService<CheckLinkEntity> checkLinkService
@@ -62,54 +63,38 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public IndexindResponse startIndexingAllSites() {
 
-        List<SiteEntity> siteEntities = siteService.getAllSites();
-        if (!siteEntities.isEmpty()
-                && !siteEntities.stream().
-                filter(siteEntity -> siteEntity.getStatus().equals(Status.INDEXING)).toList().isEmpty()) {
+        List<SiteConfig> sitesConfig = sitesList.getSiteConfigs();
+        if(isIndexingRunning.get()) {
             return new IndexindResponse(false, IndexindResponse.INDEXING_ALREADY_BEGIN);
-        }
-
-        if (!siteEntities.isEmpty()
-                && siteEntities.stream().
-                filter(siteEntity -> siteEntity.getStatus().equals(Status.INDEXING)).toList().isEmpty()) {
+        } else {
+            isIndexingRunning.set(true);
             siteService.deleteAllSites();
+            siteService.addAllSites();
         }
 
-        addSites();
-        final int countOfSites = siteService.getAllSites().size();
+        final int countOfSites = sitesConfig.size();
         poolExecutor = Executors.newFixedThreadPool(countOfSites + 1);
 
         try {
 
             siteService.getAllSites().forEach(site -> {
-                        String path = checkLinkService.getPath(site.getUrl());
                         ForkJoinPool pool = new ForkJoinPool();
-                        PageProcessor task = new PageProcessor(jsoupService, checkLinkService
-                                , pageService, site.getUrl(), site);
+                        PageProcessor task = new PageProcessor(jsoupService, site.getUrl(), site);
                         tasks.add(task);
                         listOfPools.add(pool);
                         SubmitPool submitPool = new SubmitPool(pool, task);
                         Future<String> future = poolExecutor.submit(submitPool);
                         results.add(future);
-                        site.setStatus(Status.INDEXING);
-                        site.setStatusTime(LocalDateTime.now());
-                        siteService.updateSite(site);
-                        checkLinkService.saveLink(new CheckLinkEntity(path, site));
-
+                        siteService.updateSite(site, Status.INDEXING, null);
                     }
             );
             MonitoringIndexing monitoring = new MonitoringIndexing(siteService, results);
-            monitoringResult = monitoringExecutor.scheduleAtFixedRate(monitoring, 1, 1, TimeUnit.SECONDS);
-
+            poolExecutor.submit(monitoring);
             poolExecutor.shutdown();
-//            monitoringExecutor.shutdown();
             return new IndexindResponse(true, null);
         } catch (Exception e) {
             siteService.getAllSites().forEach(site -> {
-                site.setStatus(Status.FAILED);
-                site.setStatusTime(LocalDateTime.now());
-                site.setLastError(e.getLocalizedMessage());
-                siteService.updateSite(site);
+                siteService.updateSite(site, Status.FAILED, e.getLocalizedMessage());
             });
             return new IndexindResponse(false, IndexindResponse.INDEXING_FAILED);
         }
@@ -117,24 +102,11 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse stopIndexingAllSites() {
-        if (poolExecutor == null) return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
-        if (siteService.getAllSites().isEmpty()) {
-            return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
-        }
+        if (!IndexingService.isIndexingRunning.get()) return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
+
         if (!isIndexingStopped.get()) {
             isIndexingStopped.set(true);
         }
-        if (poolExecutor.isShutdown()) {
-            log.info("Инициирован подрыв основной базы");
-        }
-
-        siteService.getAllSites().forEach(siteEntity -> {
-            siteEntity.setStatus(Status.FAILED);
-            siteEntity.setLastError("Индексация остановлена пользователем");
-            siteService.saveSite(siteEntity);
-        });
-        log.info("Записали в БД Fail");
-
 
         return new IndexindResponse(true, null);
     }
@@ -144,13 +116,5 @@ public class IndexingServiceImpl implements IndexingService {
         return null;
     }
 
-    private void addSites() {
-        List<SiteConfig> siteConfigs = sitesList.getSiteConfigs();
-        for (SiteConfig siteConfig : siteConfigs) {
-            SiteEntity siteEntity = new SiteEntity(Status.INDEXING, LocalDateTime.now(), null,
-                    siteConfig.getUrl(), siteConfig.getName());
-            siteEntity.setId(siteService.saveSite(siteEntity).getId());
-        }
-    }
 }
 

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import searchengine.config.JSOUPSettings;
 import searchengine.entity.CheckLinkEntity;
+import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.checklink.CheckLinkService;
 import searchengine.services.indexing.IndexingServiceImpl;
@@ -29,6 +30,8 @@ public class JsoupServiceImpl implements JsoupService{
     private final JSOUPSettings jsoupSettings;
     private final CheckLinkService<CheckLinkEntity> checkLinkService;
     private ConcurrentSkipListSet<String> siteLinkSet = new ConcurrentSkipListSet<String>();
+
+
 
     public JsoupServiceImpl(CheckLinkService<CheckLinkEntity> checkLinkService, JSOUPSettings jsoupSettings) {
         this.checkLinkService = checkLinkService;
@@ -65,6 +68,7 @@ public class JsoupServiceImpl implements JsoupService{
             }
             Elements elements = document.select("a[href]:not([href^=tel]" +
                     ", [href~=#],[href^=javascript],[href~=,],[href^=mailto],[img])");
+
             for (Element element : elements) {
                 String link = element.absUrl("href");
                 if(! checkLinkService.isValid(link, url, site)) continue;
@@ -84,6 +88,23 @@ public class JsoupServiceImpl implements JsoupService{
         }
         log.info("Size of listSiteUrls " + siteLinkSet.size());
         return pageUrls;
+    }
+
+    @Override
+    public PageEntity getPageData(String url, SiteEntity site) {
+        Connection connection;
+        Document document = null;
+        if(! checkLinkService.isValid(url, url, site)) return null;
+        connection = connectToPage(url);
+        try {
+            document = connection.get();
+            return new PageEntity(site, checkLinkService.getPath(url)
+                    , document.outerHtml(), connection.response().statusCode());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new PageEntity(site, checkLinkService.getPath(url)
+                    , e.getMessage(), 503);
+        }
     }
 
 }
