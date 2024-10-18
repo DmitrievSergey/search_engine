@@ -2,20 +2,16 @@ package searchengine.services.page;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.SiteConfig;
 import searchengine.entity.PageEntity;
+import searchengine.entity.SiteEntity;
 import searchengine.repositories.PageRepository;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 @AllArgsConstructor
 @Slf4j
@@ -24,8 +20,19 @@ public class PageServiceImpl implements PageService<PageEntity> {
     PageRepository pageRepository;
 
     @Override
-    public PageEntity saveSitePage(PageEntity page){
+    public PageEntity saveSitePage(PageEntity page) throws SQLException {
+
        return pageRepository.save(page);
+    }
+
+    @Override
+    public Long getCount() {
+        return pageRepository.count();
+    }
+
+    @Override
+    public Long getCountBySite(SiteEntity site) {
+        return pageRepository.countBySite(site);
     }
 
     public void updateSitePage(PageEntity page) {
@@ -34,7 +41,7 @@ public class PageServiceImpl implements PageService<PageEntity> {
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void saveListOfSitePage(Set<PageEntity> pageEntities) {
+    public void saveListOfSitePage(List<PageEntity> pageEntities) {
         pageRepository.saveAll(pageEntities);
     }
 

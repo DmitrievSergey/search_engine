@@ -10,6 +10,7 @@ public class IndexindResponse {
             "указанных в конфигурационном файле\n";
     public static final String INDEXING_NOT_BEGIN = "Индексация не запущена";
     public static final String INDEXING_FAILED = "Индексация не запущена";
+    public static final String INDEXING_INTERRUPTED_BY_USER = "Индексация прервана пользователем";
     private boolean result;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String error;

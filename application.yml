@@ -17,7 +17,7 @@ spring:
           batch_versioned_data: true
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.xml
     enabled: true
@@ -29,17 +29,19 @@ logging:
       hibernate:
         orm:
           jdbc:
+            query: OFF
             bind: OFF
         SQL: OFF
         type:
           descriptor:
             sql:
               BasicBinder: OFF
-
 indexing-settings:
-  siteConfigs:
-    - url: https://automationpanda.com/
-      name: Panda
+  sites:
+    - url: https://www.playback.ru/
+      name: PlayBack.Ru
+    - url: https://volochek.life/
+      name: Volochek.Life
 
 jsoup-settings:
   timeout: 10000

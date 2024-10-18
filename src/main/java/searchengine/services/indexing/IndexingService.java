@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public interface IndexingService<Che> {
     public static AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
+    public static AtomicBoolean isIndexingRunning = new AtomicBoolean(false);
     IndexindResponse startIndexingAllSites();
     IndexindResponse stopIndexingAllSites();
     IndexindResponse startIndexingPage(String url);

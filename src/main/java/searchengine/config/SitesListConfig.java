@@ -12,11 +12,22 @@ import java.util.List;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "indexing-settings")
-public class SitesList {
-    private List<SiteConfig> siteConfigs;
+public class SitesListConfig {
+    private List<SiteConfig> sites;
 
     @Cacheable(value = "sites")
-    public List<SiteConfig> getSiteConfigs() {
-        return siteConfigs;
+    public List<SiteConfig> getSites() {
+        return sites;
+    }
+
+    public void setSites(List<SiteConfig> sites) {
+        this.sites = sites;
+    }
+
+    public SiteConfig existInConfig(String url) {
+        for (SiteConfig s : sites) {
+            if (url.contains(s.getUrl())) return s;
+        }
+        return null;
     }
 }

@@ -4,18 +4,12 @@ import searchengine.entity.SiteEntity;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Set;
 
-public interface CheckLinkService<CheckLinkEntity> {
+public interface CheckLinkService {
 
-    void saveLink(CheckLinkEntity link);
-
-    void saveLinks(List<CheckLinkEntity> links);
-
-    boolean isLinkExist(CheckLinkEntity link);
-
-    void deleteAll();
-
-    boolean isValid(String url, SiteEntity site);
-    String getPath(String url);
     URL getUrl(String url);
+
+    boolean isValid(String url, String baseUrl, SiteEntity site);
+
 }

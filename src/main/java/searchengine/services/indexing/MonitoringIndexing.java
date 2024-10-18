@@ -1,51 +1,73 @@
 package searchengine.services.indexing;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import searchengine.config.SiteConfig;
-import searchengine.config.SitesList;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
+import searchengine.services.jsoup.JsoupService;
+import searchengine.services.scrabbing.LinkProcessor;
 import searchengine.services.site.SiteService;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.*;
+
 @Slf4j
-@AllArgsConstructor
 @Service
 public class MonitoringIndexing implements MonitoringService {
     private SiteService<SiteEntity> siteService;
-    List<Future<String>> results;
+    private List<LinkProcessor> tasks;
+    private List<ForkJoinPool> listOfPools;
 
-    public void monitoringIndexind(List<Future<String>> results, SiteService<SiteEntity> siteService) {
-    int completedTasks = 0;
-    int countSites = siteService.getAllSites().size();
-    while(completedTasks != countSites)
-        if(IndexingService.isIndexingStopped.get()) {
-            break;
-        };
-        for (Future<String> future : results) {
-            try {
-                if (future.isDone()) {
-                    log.info("Результат future get - " + future.get());
+    private int completedTasks = 0;
+
+
+    public MonitoringIndexing(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPools) {
+        this.siteService = siteService;
+        this.tasks = tasks;
+        this.listOfPools = listOfPools;
+    }
+
+    public void monitoringIndexind(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPools) {
+        int countSites = siteService.getAllSites().size();
+
+        while (completedTasks != countSites) {
+            for (Iterator<LinkProcessor> iterator = tasks.iterator(); iterator.hasNext(); ) {
+                LinkProcessor task = iterator.next();
+                if (task.isCompletedNormally()) {
                     completedTasks++;
-                    SiteEntity site = siteService.findSiteByUrl((String) future.get());
-                    site.setStatus(Status.INDEXED);
-                    site.setStatusTime(LocalDateTime.now());
-                    siteService.updateSite(site);
+                    SiteEntity site = null;
+                    site = siteService.findSiteByUrl(task.getUrl());
+                    siteService.updateSite(site, Status.INDEXED, null);
+                    iterator.remove();
+
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+                if (task.isCompletedAbnormally()) {
+                    completedTasks++;
+                    SiteEntity site = null;
+
+                    site = siteService.findSiteByUrl(task.getUrl());
+                    siteService.updateSite(site, Status.FAILED, null);
+                    iterator.remove();
+
+                }
+                if (IndexingService.isIndexingStopped.get()) {
+                    task.cancel(true);
+                }
             }
         }
+        if (completedTasks == countSites) {
+            log.info("Зашли внутрь if");
+//            JsoupService.siteLinkSet.clear();
+            IndexingService.isIndexingRunning.set(false);
+        }
+
     }
 
     @Override
     public void run() {
-        monitoringIndexind(results, siteService);
+        monitoringIndexind(siteService, tasks, listOfPools);
     }
+
 }

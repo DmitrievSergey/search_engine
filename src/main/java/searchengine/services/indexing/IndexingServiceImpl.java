@@ -1,28 +1,26 @@
 package searchengine.services.indexing;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.startup.SafeForkJoinWorkerThreadFactory;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteConfig;
-import searchengine.config.SitesList;
+import searchengine.config.SitesListConfig;
 import searchengine.dto.indexing.IndexindResponse;
-import searchengine.entity.CheckLinkEntity;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
 import searchengine.services.checklink.CheckLinkService;
+import searchengine.services.jsoup.JsoupService;
 import searchengine.services.page.PageService;
-import searchengine.services.scrabbing.PageProcessor;
-import searchengine.services.scrabbing.ScrubbingService;
+import searchengine.services.scrabbing.LinkProcessor;
 import searchengine.services.site.SiteService;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -30,105 +28,85 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Setter
 public class IndexingServiceImpl implements IndexingService {
 
-    private SitesList sitesList;
+    private final SitesListConfig sitesList;
     private MonitoringService monitoringService;
     private SiteService<SiteEntity> siteService;
-    private ScrubbingService scrubbingService;
-    private CheckLinkService<CheckLinkEntity> checkLinkService;
+    private JsoupService jsoupService;
+    private CheckLinkService checkLinkService;
     private PageService<PageEntity> pageService;
     private List<ForkJoinPool> listOfPools = new ArrayList<>();
-    private List<Future<String>> results = new ArrayList<>();
-    private List<PageProcessor> tasks = new ArrayList<>();
-    private List<Thread> threads = new ArrayList<>();
-    public static AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
+    private List<Future<String>> linksResults = new ArrayList<>();
+    private List<LinkProcessor> tasks = new ArrayList<>();
+    private List<Future<Integer>> pagesResults = new ArrayList<>();
+    private List<SubmitPool> listOfSubmitPools = new ArrayList<>();
+
+
     private final int cores = Runtime.getRuntime().availableProcessors();
-    ExecutorService executorService;
+    ExecutorService poolExecutor;
+    ExecutorService monitoringExecutor;
 
 
-    public IndexingServiceImpl(MonitoringService monitoringService, SitesList sitesList, CheckLinkService<CheckLinkEntity> checkLinkService
+
+    public IndexingServiceImpl(MonitoringService monitoringService, SitesListConfig sitesList, CheckLinkService checkLinkService
             , PageService<PageEntity> pageService, SiteService<SiteEntity> siteService
-            , ScrubbingService scrubbingService) {
+            , JsoupService jsoupService) {
         this.monitoringService = monitoringService;
         this.sitesList = sitesList;
         this.checkLinkService = checkLinkService;
         this.pageService = pageService;
         this.siteService = siteService;
-        this.scrubbingService = scrubbingService;
+        this.jsoupService = jsoupService;
     }
 
 
     @Override
     public IndexindResponse startIndexingAllSites() {
 
-        List<SiteEntity> siteEntities = siteService.getAllSites();
-        if (!siteEntities.isEmpty()
-                && !siteEntities.stream().
-                filter(siteEntity -> siteEntity.getStatus().equals(Status.INDEXING)).toList().isEmpty()) {
+        List<SiteConfig> sitesConfig = sitesList.getSites();
+        if (isIndexingRunning.get()) {
             return new IndexindResponse(false, IndexindResponse.INDEXING_ALREADY_BEGIN);
-        }
-
-        if (!siteEntities.isEmpty()
-                && siteEntities.stream().
-                filter(siteEntity -> siteEntity.getStatus().equals(Status.INDEXING)).toList().isEmpty()) {
+        } else {
+            isIndexingRunning.set(true);
             siteService.deleteAllSites();
+
+            siteService.addAllSites();
         }
 
-        addSites();
-        final int countOfSites = siteService.getAllSites().size();
-        executorService = Executors.newFixedThreadPool(countOfSites + 1);
+        final int countOfSites = sitesConfig.size();
+        poolExecutor = Executors.newFixedThreadPool(countOfSites);
+        monitoringExecutor = Executors.newSingleThreadScheduledExecutor();
+        ExecutorService sitePoolExecutor = Executors.newFixedThreadPool(4);
+
         try {
+            siteService.getAllSites().parallelStream().forEach(site -> {
+                LinkProcessor task = new LinkProcessor(jsoupService, site.getUrl(), site);
+                tasks.add(task);
+                siteService.updateSite(site, Status.INDEXING, null);
+            });
+            ForkJoinPool poolSite = new ForkJoinPool();
+            tasks.parallelStream().forEach(poolSite::execute);
+            MonitoringIndexing monitoring = new MonitoringIndexing(siteService, tasks, listOfPools);
+            monitoringExecutor.submit(monitoring);
+            monitoringExecutor.shutdown();
 
-            siteService.getAllSites().forEach(site -> {
-                        String path = checkLinkService.getPath(site.getUrl());
-                        ForkJoinPool pool = new ForkJoinPool();
-                        PageProcessor task = new PageProcessor(scrubbingService, checkLinkService
-                                , pageService, site.getUrl(), site);
-                        tasks.add(task);
-                        listOfPools.add(pool);
-                        SubmitPool submitPool = new SubmitPool(pool, task);
-                        Future<String> future = executorService.submit(submitPool);
-                        results.add(future);
-                        site.setStatus(Status.INDEXING);
-                        site.setStatusTime(LocalDateTime.now());
-                        siteService.updateSite(site);
-                        checkLinkService.saveLink(new CheckLinkEntity(path, site));
-
-                    }
-            );
-            MonitoringIndexing monitoring = new MonitoringIndexing(siteService, results);
-            executorService.execute(monitoring);
-            executorService.shutdown();
             return new IndexindResponse(true, null);
         } catch (Exception e) {
             siteService.getAllSites().forEach(site -> {
-                site.setStatus(Status.FAILED);
-                site.setStatusTime(LocalDateTime.now());
-                site.setLastError(e.getLocalizedMessage());
-                siteService.updateSite(site);
+                siteService.updateSite(site, Status.FAILED, e.getLocalizedMessage());
             });
+
             return new IndexindResponse(false, IndexindResponse.INDEXING_FAILED);
         }
     }
 
     @Override
     public IndexindResponse stopIndexingAllSites() {
-        if (executorService == null) return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
-        if (siteService.getAllSites().isEmpty()) {
+        if (!IndexingService.isIndexingRunning.get())
             return new IndexindResponse(false, IndexindResponse.INDEXING_NOT_BEGIN);
-        }
+
         if (!isIndexingStopped.get()) {
             isIndexingStopped.set(true);
         }
-        if (executorService.isShutdown()) {
-            log.info("Инициирован подрыв основной базы");
-        }
-
-        siteService.getAllSites().forEach(siteEntity -> {
-            siteEntity.setStatus(Status.FAILED);
-            siteEntity.setLastError("Индексация остановлена пользователем");
-            siteService.saveSite(siteEntity);
-        });
-        log.info("Записали в БД Fail");
 
 
         return new IndexindResponse(true, null);
@@ -136,16 +114,18 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse startIndexingPage(String url) {
-        return null;
+        SiteConfig siteConfig = sitesList.existInConfig(url);
+        if (siteConfig == null)
+            return new IndexindResponse(false, IndexindResponse.PAGE_OUT_OF_SITES_CONFIG);
+
+        if (!siteService.existInDB(url)) siteService.addAllSites();
+        SiteEntity site = siteService.findSiteByUrl(siteConfig.getUrl());
+        ExecutorService pageExecutor = Executors.newSingleThreadScheduledExecutor();
+        ForkJoinPool pagePool = new ForkJoinPool();
+        pagePool.execute(() -> jsoupService.checkAndAddToIndexPage(url, site));
+        return new IndexindResponse(true, null);
     }
 
-    private void addSites() {
-        List<SiteConfig> siteConfigs = sitesList.getSiteConfigs();
-        for (SiteConfig siteConfig : siteConfigs) {
-            SiteEntity siteEntity = new SiteEntity(Status.INDEXING, LocalDateTime.now(), null,
-                    siteConfig.getUrl(), siteConfig.getName());
-            siteEntity.setId(siteService.saveSite(siteEntity).getId());
-        }
-    }
 }
+
 

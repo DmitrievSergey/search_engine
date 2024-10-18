@@ -1,27 +1,28 @@
 package searchengine.services.indexing;
 
 import lombok.AllArgsConstructor;
-import searchengine.services.scrabbing.PageProcessor;
+import lombok.extern.slf4j.Slf4j;
+import searchengine.services.scrabbing.LinkProcessor;
 
 
 import java.util.concurrent.*;
 
-
+@Slf4j
 @AllArgsConstructor
-public class SubmitPool implements Callable<String> {
+public class SubmitPool implements Callable<LinkProcessor> {
     private ForkJoinPool pool;
-    private PageProcessor task;
+    private LinkProcessor task;
 
 
-    private String runPool(ForkJoinPool pool, PageProcessor task) throws RejectedExecutionException {
-        pool.invoke(task);
+    private LinkProcessor runPool(ForkJoinPool pool, LinkProcessor task) throws RejectedExecutionException {
+        pool.execute(task);
         pool.shutdown();
-
-        return task.getUrl();
+        log.info("Task get url " + task.getUrl());
+        return task;
     }
 
     @Override
-    public String call() throws Exception {
+    public LinkProcessor call() throws Exception {
         return runPool(pool, task);
     }
 }
