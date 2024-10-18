@@ -6,34 +6,41 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import searchengine.config.JSOUPSettings;
-import searchengine.entity.CheckLinkEntity;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.checklink.CheckLinkService;
+import searchengine.services.index.IndexService;
 import searchengine.services.indexing.IndexingServiceImpl;
+import searchengine.services.lemma.LemmaService;
+import searchengine.services.page.PageService;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 @Slf4j
 @Service
-public class JsoupServiceImpl implements JsoupService{
+public class JsoupServiceImpl implements JsoupService {
     private final JSOUPSettings jsoupSettings;
-    private final CheckLinkService<CheckLinkEntity> checkLinkService;
-    private ConcurrentSkipListSet<String> siteLinkSet = new ConcurrentSkipListSet<String>();
+    private final CheckLinkService checkLinkService;
+    private final PageService<PageEntity> pageService;
+    private final IndexService indexService;
+    private final LemmaService lemmaService;
 
 
-
-    public JsoupServiceImpl(CheckLinkService<CheckLinkEntity> checkLinkService, JSOUPSettings jsoupSettings) {
+    public JsoupServiceImpl(IndexService indexService, LemmaService lemmaService, PageService<PageEntity> pageService
+            , CheckLinkService checkLinkService, JSOUPSettings jsoupSettings) {
+        this.indexService = indexService;
+        this.lemmaService = lemmaService;
+        this.pageService = pageService;
         this.checkLinkService = checkLinkService;
         this.jsoupSettings = jsoupSettings;
 
@@ -55,6 +62,7 @@ public class JsoupServiceImpl implements JsoupService{
                 .userAgent(userAgent)
                 .referrer(jsoupSettings.getReferrer());
     }
+
     @Override
     public Set<String> getUrlsSetFromUrl(String url, SiteEntity site) {
         Connection connection;
@@ -71,39 +79,79 @@ public class JsoupServiceImpl implements JsoupService{
 
             for (Element element : elements) {
                 String link = element.absUrl("href");
-                if(! checkLinkService.isValid(link, url, site)) continue;
-                if(siteLinkSet.contains(link)) continue;
+                if (!checkLinkService.isValid(link, url, site)) continue;
+                if (siteLinkSet.contains(link)) continue;
                 siteLinkSet.add(link);
-                pageUrls.add(link);
+                URL pageUrl = checkLinkService.getUrl(link);
 
+
+                PageEntity page = PageEntity.builder()
+                        .site(site)
+                        .path(pageUrl.getPath())
+                        .content(document.outerHtml())
+                        .responseCode(connection.response().statusCode())
+                        .build();
+                pageService.saveSitePage(page);
+
+
+                indexService.createIndexes(lemmaService.getLemmas(document, site),
+                        page);
+                pageUrls.add(link);
             }
 
         } catch (SocketTimeoutException e) {
             e.printStackTrace();
-        } catch(UnknownHostException e) {
+        } catch (UnknownHostException e) {
             e.printStackTrace();
             log.info("Поймали на урле = " + url);
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
-        log.info("Size of listSiteUrls " + siteLinkSet.size());
+
         return pageUrls;
     }
-
     @Override
-    public PageEntity getPageData(String url, SiteEntity site) {
+    public void checkAndAddToIndexPage(String url, SiteEntity site) {
         Connection connection;
         Document document = null;
-        if(! checkLinkService.isValid(url, url, site)) return null;
-        connection = connectToPage(url);
         try {
+            connection = connectToPage(url);
             document = connection.get();
-            return new PageEntity(site, checkLinkService.getPath(url)
-                    , document.outerHtml(), connection.response().statusCode());
+            if (document == null) {
+                return;
+            }
+            if (!checkLinkService.isValid(url, site.getUrl(), site)) return;
+            if (siteLinkSet.contains(url)) return;
+            siteLinkSet.add(url);
+            URL pageUrl = checkLinkService.getUrl(url);
+
+
+            PageEntity page = PageEntity.builder()
+                    .site(site)
+                    .path(pageUrl.getPath())
+                    .content(document.outerHtml())
+                    .responseCode(connection.response().statusCode())
+                    .build();
+            pageService.saveSitePage(page);
+
+
+            indexService.createIndexes(lemmaService.getLemmas(document, site),
+                    page);
+
+        } catch (SocketTimeoutException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            log.info("Поймали на урле = " + url);
         } catch (IOException e) {
             e.printStackTrace();
-            return new PageEntity(site, checkLinkService.getPath(url)
-                    , e.getMessage(), 503);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        if (IndexingServiceImpl.isIndexingStopped.get()) {
+            return;
         }
     }
 

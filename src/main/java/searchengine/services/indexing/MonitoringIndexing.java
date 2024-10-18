@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
+import searchengine.services.jsoup.JsoupService;
+import searchengine.services.scrabbing.LinkProcessor;
 import searchengine.services.site.SiteService;
 
 import java.time.LocalDateTime;
@@ -15,66 +17,57 @@ import java.util.concurrent.*;
 @Service
 public class MonitoringIndexing implements MonitoringService {
     private SiteService<SiteEntity> siteService;
-    private List<Future<String>> results;
-    private ScheduledFuture<?> monitoringResult;
+    private List<LinkProcessor> tasks;
+    private List<ForkJoinPool> listOfPools;
+
     private int completedTasks = 0;
 
-    public MonitoringIndexing(SiteService<SiteEntity> siteService, List<Future<String>> results) {
+
+    public MonitoringIndexing(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPools) {
         this.siteService = siteService;
-        this.results = results;
+        this.tasks = tasks;
+        this.listOfPools = listOfPools;
     }
 
-    public void monitoringIndexind(List<Future<String>> results, SiteService<SiteEntity> siteService) {
+    public void monitoringIndexind(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPools) {
         int countSites = siteService.getAllSites().size();
 
-
         while (completedTasks != countSites) {
-
-            if (IndexingService.isIndexingStopped.get()) {
-                for(Iterator<Future<String>> iterator = results.iterator(); iterator.hasNext();) {
-                    Future<String> future = iterator.next();
-                    future.cancel(true);
-                    completedTasks++;
-                }
-            }
-            for(Iterator<Future<String>> iterator = results.iterator(); iterator.hasNext();) {
-                Future<String> future = iterator.next();
-                if (future.isDone()) {
+            for (Iterator<LinkProcessor> iterator = tasks.iterator(); iterator.hasNext(); ) {
+                LinkProcessor task = iterator.next();
+                if (task.isCompletedNormally()) {
                     completedTasks++;
                     SiteEntity site = null;
-                    try {
-                        site = siteService.findSiteByUrl(future.get());
-                        siteService.updateSite(site, Status.INDEXED, null);
-                        iterator.remove();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
+                    site = siteService.findSiteByUrl(task.getUrl());
+                    siteService.updateSite(site, Status.INDEXED, null);
+                    iterator.remove();
 
                 }
-                if(future.isCancelled()) {
+                if (task.isCompletedAbnormally()) {
                     completedTasks++;
                     SiteEntity site = null;
-                    try {
-                        site = siteService.findSiteByUrl((String) future.get());
-                        siteService.updateSite(site, Status.FAILED, null);
-                        iterator.remove();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
+
+                    site = siteService.findSiteByUrl(task.getUrl());
+                    siteService.updateSite(site, Status.FAILED, null);
+                    iterator.remove();
+
+                }
+                if (IndexingService.isIndexingStopped.get()) {
+                    task.cancel(true);
                 }
             }
         }
-        if(completedTasks == countSites) {
+        if (completedTasks == countSites) {
             log.info("Зашли внутрь if");
+//            JsoupService.siteLinkSet.clear();
             IndexingService.isIndexingRunning.set(false);
-            //monitoringResult.cancel(true);
         }
 
     }
 
     @Override
     public void run() {
-        monitoringIndexind(results, siteService);
+        monitoringIndexind(siteService, tasks, listOfPools);
     }
 
 }

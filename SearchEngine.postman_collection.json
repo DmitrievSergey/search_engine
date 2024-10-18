@@ -1,0 +1,95 @@
+{
+	"info": {
+		"_postman_id": "cc0389c4-a137-4a0a-b001-65b445618dd9",
+		"name": "SearchEngine",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "15499505"
+	},
+	"item": [
+		{
+			"name": "StarIndexind",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/startIndexing",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"startIndexing"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "StopIndexing",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/stopIndexing",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"stopIndexing"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Statistic",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/statistics",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"statistics"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}

@@ -47,22 +47,6 @@
     <addAutoIncrement tableName="page" columnName="id" columnDataType="INT"/>
     <sql>create unique index path_id_page on page (site_id, path(255)) using BTREE</sql>
 
-
-    <createTable tableName="link">
-        <column name="id" type="INT">
-            <constraints primaryKey="true" nullable="false"/>
-        </column>
-        <column name="path" type="varchar(255)">
-            <constraints nullable="false"/>
-        </column>
-        <column name="site_id" type="INT">
-            <constraints nullable="false" foreignKeyName="fk_site_id_link" references="site(id)" deleteCascade="true"/>
-        </column>
-    </createTable>
-    <addAutoIncrement tableName="link" columnName="id" columnDataType="INT"/>
-    <sql>create unique index path_id_link on link (site_id, path(255)) using BTREE</sql>
-
-
     <createTable tableName="lemma">
         <column name="id" type="INT">
             <constraints primaryKey="true" nullable="false"/>
@@ -74,9 +58,6 @@
             <constraints nullable="false"/>
         </column>
         <column name="frequency" type="INT">
-            <constraints nullable="false"/>
-        </column>
-        <column name="content" type="MEDIUMTEXT">
             <constraints nullable="false"/>
         </column>
     </createTable>
@@ -97,6 +78,37 @@
         </column>
     </createTable>
     <addAutoIncrement tableName="index" columnName="id" columnDataType="INT"/>
+
+    <createTable tableName="search_entity">
+        <column name="id" type="INT">
+            <constraints primaryKey="true" nullable="false"/>
+        </column>
+        <column name="query" type="varchar(255)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="site" type="varchar(255)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="site_name" type="varchar(255)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="url" type="varchar(255)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="title" type="varchar(255)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="snippet" type="TEXT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="relevance" type="FLOAT">
+            <constraints nullable="false"/>
+        </column>
+    </createTable>
+    <addAutoIncrement tableName="search_entity" columnName="id" columnDataType="INT"/>
+
     </changeSet>
+
+
 
 </databaseChangeLog>

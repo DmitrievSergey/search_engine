@@ -17,7 +17,7 @@ spring:
           batch_versioned_data: true
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.xml
     enabled: true
@@ -29,6 +29,7 @@ logging:
       hibernate:
         orm:
           jdbc:
+            query: OFF
             bind: OFF
         SQL: OFF
         type:
@@ -36,11 +37,11 @@ logging:
             sql:
               BasicBinder: OFF
 indexing-settings:
-  siteConfigs:
+  sites:
     - url: https://www.playback.ru/
       name: PlayBack.Ru
-    - url: https://sendel.ru
-      name: Sendel
+    - url: https://volochek.life/
+      name: Volochek.Life
 
 jsoup-settings:
   timeout: 10000
