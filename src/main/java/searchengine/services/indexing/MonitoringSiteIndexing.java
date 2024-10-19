@@ -18,15 +18,21 @@ import java.util.concurrent.*;
 public class MonitoringIndexing implements MonitoringService {
     private SiteService<SiteEntity> siteService;
     private List<LinkProcessor> tasks;
-    private List<ForkJoinPool> listOfPools;
+    private List<ForkJoinPool> listOfPool;
+
 
     private int completedTasks = 0;
 
 
-    public MonitoringIndexing(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPools) {
+    public MonitoringIndexing(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPool) {
         this.siteService = siteService;
         this.tasks = tasks;
-        this.listOfPools = listOfPools;
+        this.listOfPool = listOfPool;
+    }
+
+    public MonitoringIndexing(SiteService<SiteEntity> siteService, List<ForkJoinPool> listOfPool) {
+        this.siteService = siteService;
+        this.listOfPool = listOfPool;
     }
 
     public void monitoringIndexind(SiteService<SiteEntity> siteService, List<LinkProcessor> tasks, List<ForkJoinPool> listOfPools) {
@@ -59,7 +65,8 @@ public class MonitoringIndexing implements MonitoringService {
         }
         if (completedTasks == countSites) {
             log.info("Зашли внутрь if");
-//            JsoupService.siteLinkSet.clear();
+            tasks.clear();
+            listOfPool.clear();
             IndexingService.isIndexingRunning.set(false);
         }
 
@@ -67,7 +74,7 @@ public class MonitoringIndexing implements MonitoringService {
 
     @Override
     public void run() {
-        monitoringIndexind(siteService, tasks, listOfPools);
+        monitoringIndexind(siteService, tasks, listOfPool);
     }
 
 }
