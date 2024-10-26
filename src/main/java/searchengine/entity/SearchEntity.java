@@ -1,15 +1,15 @@
 package searchengine.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import searchengine.dto.statistics.SearchStatistic;
 
-@Entity
 @Getter
 @Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class SearchEntity {
+@Entity
+@Table(name = "search")
+public class SearchEntity implements Comparable<SearchEntity>{
     @Id
     @Column(nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,4 +28,36 @@ public class SearchEntity {
     private String snippet;
     @Column(name = "relevance", nullable = false)
     private float relevance;
+
+    public SearchEntity(String site, String siteName, String uri, String title, String snippet, float relevance) {
+        this.site = site;
+        this.siteName = siteName;
+        this.uri = uri;
+        this.title = title;
+        this.snippet = snippet;
+        this.relevance = relevance;
+    }
+
+    public SearchEntity() {
+    }
+
+    public SearchStatistic entityToStatistic(){
+
+
+        return new SearchStatistic(
+                this.getSite(),
+                this.getSiteName(),
+                this.getUri(),
+                this.getTitle(),
+                this.getSnippet(),
+                this.getRelevance()
+        );
+    }
+
+    @Override
+    public int compareTo(SearchEntity o) {
+        Float th = this.getRelevance();
+        Float oth = o.getRelevance();
+        return th.compareTo(oth);
+    }
 }

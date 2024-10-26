@@ -3,25 +3,24 @@ package searchengine.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Getter
 @Setter
 @Entity
-@Builder
-@ToString
 @NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "lemma", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"lemma", "site_id"})
 })
-public class LemmaEntity {
+public class LemmaEntity implements Serializable {
     @Id
     @Column(nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
@@ -31,6 +30,9 @@ public class LemmaEntity {
 
     @Column(name = "frequency", nullable = false)
     private int frequency;
+
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
+    private List<IndexSearchEntity> index = new ArrayList<>();
 
     @Override
     public boolean equals(Object o) {
@@ -43,5 +45,11 @@ public class LemmaEntity {
     @Override
     public int hashCode() {
         return Objects.hash(site, lemma);
+    }
+
+    public LemmaEntity(SiteEntity site, String lemma, int frequency) {
+        this.site = site;
+        this.lemma = lemma;
+        this.frequency = frequency;
     }
 }

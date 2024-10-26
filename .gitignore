@@ -24,3 +24,6 @@ hs_err_pid*
 replay_pid*
 /.idea/
 /target/
+/logs/
+/src/main/java/searchengine/component/lemma/Merge.java
+/src/main/java/searchengine/component/lemma/MonitoringMerge.java

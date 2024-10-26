@@ -2,12 +2,12 @@ package searchengine.dto.statistics;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.Value;
 
-@Data
-@Builder
+@Value
 public class TotalStatistics {
-    private Long sites;
-    private Long pages;
-    private Long lemmas;
-    private boolean indexing;
+    Long sites;
+    Long pages;
+    Long lemmas;
+    boolean indexing;
 }
