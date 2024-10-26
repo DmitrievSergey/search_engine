@@ -15,10 +15,12 @@ import searchengine.dto.exception.CustomInterruptException;
 import searchengine.dto.statistics.PageStatistic;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
+import searchengine.services.indexing.IndexingService;
 
 
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
 
 public class MonitoringPageIndexing implements MonitoringService, JsoupConnection {
     private static Logger logger = LoggerFactory.getLogger(MonitoringPageIndexing.class);
@@ -57,18 +59,22 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
             page = new PageEntity(site, pagePath, pageStatistic.getCode(),  pageStatistic.getContent());
             logger.debug("Получили контент страницы " + pageStatistic);
             pageService.save(page);
+            if (pageStatistic.getCode() >= 400) throw new CustomInterruptException(
+                    CustomInterruptException.PAGE_UNREACHABLE,
+                    pageStatistic.getCode(),
+                    url
+            );
             Map<Integer, Integer> lemmaIdsAndFrequency;
             try {
                 lemmaIdsAndFrequency = lemmaService.addPageLemmaToDb(page, site);
                 indexService.addPageIndexToDb(page, lemmaIdsAndFrequency);
                 siteService.setIndexedStatus(site);
                 logger.info("Завершили индексацию по странице {} сайта {} ", url, siteConfig.getName());
+                logger.info("Индексация завершилась {}", IndexingService.isIndexingRunning.get());
+                ForkJoinPool.commonPool().shutdown();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
-
-            Thread.currentThread().interrupt();
         }
 
         catch (CustomInterruptException e) {
@@ -97,7 +103,6 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
     }
 
     private PageStatistic getPageData(String url) {
-        List<PageStatistic> pageList = new ArrayList<>();
         try {
             Document document = JsoupConnection.getConnect(url);
             String html = document.outerHtml();

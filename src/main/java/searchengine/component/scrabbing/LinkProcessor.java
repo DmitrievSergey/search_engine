@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import searchengine.config.SiteConfig;
 import searchengine.dto.exception.CustomInfoException;
 import searchengine.dto.exception.CustomInterruptException;
+import searchengine.dto.exception.CustomStopIndexingException;
 import searchengine.dto.statistics.PageStatistic;
 import searchengine.services.indexing.IndexingService;
 import searchengine.component.MonitoringSiteIndexing;
@@ -51,8 +52,7 @@ public class LinkProcessor  extends RecursiveTask<List<PageStatistic>> implement
     @Override
     protected List<PageStatistic> compute()  {
         if(IndexingService.isIndexingStopped.get()) {
-            Thread.currentThread().interrupt();
-            throw new InterruptedException();
+            throw new CustomStopIndexingException("Индексация остановлена пользователем.", getException());
         }
         try {
             Thread.sleep(150);
@@ -89,13 +89,16 @@ public class LinkProcessor  extends RecursiveTask<List<PageStatistic>> implement
             PageStatistic pageStatistic = new PageStatistic(address,e.getMessage(), e.getStatusCode());
             pageStatisticList.add(pageStatistic);
         }
+        catch (CustomStopIndexingException e) {
+            throw new CustomStopIndexingException(e.getMessage(), e);
+        }
         catch (NullPointerException e) {
             logger.info("On url {}, error {}", address, e.getMessage());
         }
         catch (Exception e) {
             e.printStackTrace();
         }
-        logger.info("Size pageStatisticList = {}", pageStatisticList.size());
+        logger.debug("Size pageStatisticList = {}", pageStatisticList.size());
         return pageStatisticList;
 
     }
