@@ -3,9 +3,14 @@ package searchengine.repositories;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
+import searchengine.entity.PageEntity;
 import searchengine.entity.SearchEntity;
-@Repository
+
+import java.util.List;
+
 public interface SearchRepository extends JpaRepository<SearchEntity, Integer> {
     Page<SearchEntity> findAllByQuery(String query, Pageable pageable);
 
@@ -21,5 +26,16 @@ public interface SearchRepository extends JpaRepository<SearchEntity, Integer> {
 
     Integer countByQueryAndSite(String query, String site);
 
+    @Query("select se from SearchEntity se where se.query=?1")
+    List<SearchEntity> findAllByQuery(String query);
+
+    @Query("select se from SearchEntity se where se.query=?1 and se.site=?2")
+    List<SearchEntity> findAllByQueryAndSite(String query, String site);
+
     void deleteAllBySiteAndUri(String site, String uri);
+
+    @Modifying
+    @Transactional
+    @Query(value = "TRUNCATE TABLE `search` ", nativeQuery = true)
+    void clearSearch();
 }

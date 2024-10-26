@@ -27,12 +27,13 @@
             <constraints nullable="false"/>
         </column>
     </createTable>
+    <addAutoIncrement tableName="site" columnName="id" columnDataType="INT"/>
     <createTable tableName="page">
         <column name="id" type="INT">
             <constraints primaryKey="true" nullable="false"/>
         </column>
         <column name="site_id" type="INT">
-            <constraints nullable="false" foreignKeyName="fk_site_id_page" references="site(id)" deleteCascade="true"/>
+            <constraints nullable="false" foreignKeyName="fk_site_id_page" references="site(id)" deleteCascade="false"/>
         </column>
         <column name="path" type="TEXT">
             <constraints nullable="false"/>
@@ -47,12 +48,13 @@
     <addAutoIncrement tableName="page" columnName="id" columnDataType="INT"/>
     <sql>create unique index path_id_page on page (site_id, path(255)) using BTREE</sql>
 
+
     <createTable tableName="lemma">
         <column name="id" type="INT">
             <constraints primaryKey="true" nullable="false"/>
         </column>
         <column name="site_id" type="INT">
-            <constraints nullable="false" foreignKeyName="fk_site_id_lemma" references="site(id)" deleteCascade="true"/>
+            <constraints nullable="false" foreignKeyName="fk_site_id_lemma" references="site(id)" deleteCascade="false"/>
         </column>
         <column name="lemma" type="VARCHAR(255)">
             <constraints nullable="false"/>
@@ -62,6 +64,7 @@
         </column>
     </createTable>
     <addAutoIncrement tableName="lemma" columnName="id" columnDataType="INT"/>
+    <sql>create unique index lemma_id_lemma on lemma (site_id, lemma(255)) using BTREE</sql>
 
     <createTable tableName="index">
         <column name="id" type="INT">
@@ -78,8 +81,10 @@
         </column>
     </createTable>
     <addAutoIncrement tableName="index" columnName="id" columnDataType="INT"/>
+<!--    <sql>create index index_lemma_index on `index` (lemma_id) using BTREE</sql>-->
+<!--    <sql>create index index_page_index on `index` (page_id) using BTREE</sql>-->
 
-    <createTable tableName="search_entity">
+    <createTable tableName="search">
         <column name="id" type="INT">
             <constraints primaryKey="true" nullable="false"/>
         </column>
@@ -105,7 +110,7 @@
             <constraints nullable="false"/>
         </column>
     </createTable>
-    <addAutoIncrement tableName="search_entity" columnName="id" columnDataType="INT"/>
+    <addAutoIncrement tableName="search" columnName="id" columnDataType="INT"/>
 
     </changeSet>
 

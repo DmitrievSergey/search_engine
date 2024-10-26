@@ -25,7 +25,7 @@ logging:
   level:
     org:
       springframework:
-        cache: OFF
+        cache: DEBUG
       hibernate:
         orm:
           jdbc:
@@ -36,12 +36,22 @@ logging:
           descriptor:
             sql:
               BasicBinder: OFF
+  file:
+    name: logs/myapp.log
+    max-size: 10MB
+    max-history: 10
 indexing-settings:
   sites:
-    - url: https://www.playback.ru/
-      name: PlayBack.Ru
-    - url: https://volochek.life/
-      name: Volochek.Life
+#    - url: https://www.playback.ru/
+#      name: PlayBack.Ru
+#    - url: https://volochek.life/
+#      name: Volochek.Life
+#    - url: https://radiomv.ru/
+#      name: Милицейская волна
+#    - url: https://ipfran.ru/
+#      name: ИПФ РАН
+    - url: https://dimonvideo.ru/
+      name: DimonVideo
 
 jsoup-settings:
   timeout: 10000

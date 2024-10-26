@@ -1,16 +1,17 @@
 package searchengine.dto.statistics;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
+import searchengine.entity.Status;
 
-@Data
-@Builder
+import java.time.LocalDateTime;
+
+@Value
 public class DetailedStatisticsItem {
-    private String url;
-    private String name;
-    private String status;
-    private long statusTime;
-    private String error;
-    private Long pages;
-    private Long lemmas;
+    String url;
+    String name;
+    Status status;
+    LocalDateTime statusTime;
+    String error;
+    Long pages;
+    Long lemmas;
 }

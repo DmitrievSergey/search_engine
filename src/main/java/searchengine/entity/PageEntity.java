@@ -2,15 +2,16 @@ package searchengine.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.apache.lucene.search.IndexSearcher;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import static java.lang.Integer.compare;
 
 @Getter
 @Setter
-@Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -24,7 +25,7 @@ import static java.lang.Integer.compare;
 public class PageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int id;
+    Integer id;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
     SiteEntity site;
@@ -36,4 +37,10 @@ public class PageEntity {
 
     String content;
 
+    public PageEntity(SiteEntity site, String path, int responseCode, String content) {
+        this.site = site;
+        this.path = path;
+        this.responseCode = responseCode;
+        this.content = content;
+    }
 }

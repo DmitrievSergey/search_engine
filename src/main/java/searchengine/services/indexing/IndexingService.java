@@ -5,9 +5,12 @@ import searchengine.dto.indexing.IndexindResponse;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public interface IndexingService<Che> {
-    public static AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
-    public static AtomicBoolean isIndexingRunning = new AtomicBoolean(false);
+public interface IndexingService {
+
+    int CORES = Runtime.getRuntime().availableProcessors();
+
+    AtomicBoolean isIndexingStopped = new AtomicBoolean(false);
+    AtomicBoolean isIndexingRunning = new AtomicBoolean(false);
     IndexindResponse startIndexingAllSites();
     IndexindResponse stopIndexingAllSites();
     IndexindResponse startIndexingPage(String url);

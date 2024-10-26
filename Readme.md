@@ -6,7 +6,6 @@
 
 <p align="center">
 <img src="https://img.shields.io/badge/java-17-green.svg">
-<img src="https://img.shields.io/badge/mapstruct-1.6.2-green.svg">
 <img src="https://img.shields.io/badge/liquibase-4.29.2-green.svg">
 </p>
 
@@ -24,15 +23,16 @@
 ### Indexing
 - Запуск индексации
 - Остановка
-- Мониторинг
+
+### Search
+- Формирование ответа на поисковые запросы
+
+### Statistic
+- Формирование статистики
+
 ### Scrabbing
 - генерация заданий для получения ссылок
 
-### Jsoup
-Сервис для работы с Jsoup
-
-- Получение ссылок, содержащихся на странице
-- Получение контента страницы
 
 ### Lemma
 - Получение лемм
@@ -42,14 +42,9 @@
 - Определение языка текста
 - Получение нормальной формы
 
-### Search
- - Формирование ответа на поисковые запросы
 
 ### Snippets
 - Формирование снипетов
-
-### Statistic
-- Формирование статистики
 
 ## Examples API requests
 Postman collection - [SearchEngine.postman_collection.json](SearchEngine.postman_collection.json)

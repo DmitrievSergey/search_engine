@@ -1,103 +1,67 @@
 package searchengine.services.indexing;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.startup.SafeForkJoinWorkerThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import searchengine.config.SiteConfig;
+import searchengine.component.MonitoringPageIndexing;
+import searchengine.component.MonitoringService;
+import searchengine.component.MonitoringSiteIndexing;
 import searchengine.config.SitesListConfig;
 import searchengine.dto.indexing.IndexindResponse;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
-import searchengine.entity.Status;
-import searchengine.services.checklink.CheckLinkService;
-import searchengine.services.jsoup.JsoupService;
-import searchengine.services.page.PageService;
-import searchengine.services.scrabbing.LinkProcessor;
-import searchengine.services.site.SiteService;
+import searchengine.component.site.SiteService;
+import searchengine.component.index.IndexService;
+import searchengine.component.lemma.LemmaService;
+import searchengine.component.page.PageService;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
-@Service
 @Getter
 @Setter
+@Service
+@RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
+    private static Logger logger = LoggerFactory.getLogger(IndexingServiceImpl.class);
+
 
     private final SitesListConfig sitesList;
-    private MonitoringService monitoringService;
-    private SiteService<SiteEntity> siteService;
-    private JsoupService jsoupService;
-    private CheckLinkService checkLinkService;
-    private PageService<PageEntity> pageService;
-    private List<ForkJoinPool> listOfPools = new ArrayList<>();
-    private List<Future<String>> linksResults = new ArrayList<>();
-    private List<LinkProcessor> tasks = new ArrayList<>();
-    private List<Future<Integer>> pagesResults = new ArrayList<>();
-    private List<SubmitPool> listOfSubmitPools = new ArrayList<>();
-
-
-    private final int cores = Runtime.getRuntime().availableProcessors();
-    ExecutorService poolExecutor;
-    ExecutorService monitoringExecutor;
-
-
-
-    public IndexingServiceImpl(MonitoringService monitoringService, SitesListConfig sitesList, CheckLinkService checkLinkService
-            , PageService<PageEntity> pageService, SiteService<SiteEntity> siteService
-            , JsoupService jsoupService) {
-        this.monitoringService = monitoringService;
-        this.sitesList = sitesList;
-        this.checkLinkService = checkLinkService;
-        this.pageService = pageService;
-        this.siteService = siteService;
-        this.jsoupService = jsoupService;
-    }
-
+    private final MonitoringService monitoringService;
+    private final SiteService<SiteEntity> siteService;
+    private final PageService<PageEntity> pageService;
+    private final LemmaService lemmaService;
+    private final IndexService indexService;
+    ExecutorService indexingExecutor;
 
     @Override
     public IndexindResponse startIndexingAllSites() {
-
-        List<SiteConfig> sitesConfig = sitesList.getSites();
+        //Проверить статус индексации
         if (isIndexingRunning.get()) {
             return new IndexindResponse(false, IndexindResponse.INDEXING_ALREADY_BEGIN);
         } else {
             isIndexingRunning.set(true);
-            siteService.deleteAllSites();
-
-            siteService.addAllSites();
-        }
-
-        final int countOfSites = sitesConfig.size();
-        poolExecutor = Executors.newFixedThreadPool(countOfSites);
-        monitoringExecutor = Executors.newSingleThreadScheduledExecutor();
-        ExecutorService sitePoolExecutor = Executors.newFixedThreadPool(4);
-
-        try {
-            siteService.getAllSites().parallelStream().forEach(site -> {
-                LinkProcessor task = new LinkProcessor(jsoupService, site.getUrl(), site);
-                tasks.add(task);
-                siteService.updateSite(site, Status.INDEXING, null);
-            });
-            ForkJoinPool poolSite = new ForkJoinPool();
-            tasks.parallelStream().forEach(poolSite::execute);
-            MonitoringIndexing monitoring = new MonitoringIndexing(siteService, tasks, listOfPools);
-            monitoringExecutor.submit(monitoring);
-            monitoringExecutor.shutdown();
-
-            return new IndexindResponse(true, null);
-        } catch (Exception e) {
-            siteService.getAllSites().forEach(site -> {
-                siteService.updateSite(site, Status.FAILED, e.getLocalizedMessage());
+            deleteAllSites();
+            indexingExecutor = Executors.newFixedThreadPool(CORES);
+            sitesList.getSites().parallelStream().forEach(siteConfig -> {
+                logger.info("Start indexing site: " + siteConfig.getName() + " url - " + siteConfig.getUrl());
+                MonitoringService monitoring = new MonitoringSiteIndexing(siteService, pageService,
+                        indexService, lemmaService, siteConfig);
+                indexingExecutor.execute(monitoring);
             });
 
-            return new IndexindResponse(false, IndexindResponse.INDEXING_FAILED);
+            indexingExecutor.shutdown();
+
         }
+
+        return new IndexindResponse(true, null);
     }
+
+
 
     @Override
     public IndexindResponse stopIndexingAllSites() {
@@ -106,6 +70,7 @@ public class IndexingServiceImpl implements IndexingService {
 
         if (!isIndexingStopped.get()) {
             isIndexingStopped.set(true);
+            Thread.currentThread().interrupt();
         }
 
 
@@ -114,18 +79,33 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse startIndexingPage(String url) {
-        SiteConfig siteConfig = sitesList.existInConfig(url);
-        if (siteConfig == null)
-            return new IndexindResponse(false, IndexindResponse.PAGE_OUT_OF_SITES_CONFIG);
 
-        if (!siteService.existInDB(url)) siteService.addAllSites();
-        SiteEntity site = siteService.findSiteByUrl(siteConfig.getUrl());
-        ExecutorService pageExecutor = Executors.newSingleThreadScheduledExecutor();
-        ForkJoinPool pagePool = new ForkJoinPool();
-        pagePool.execute(() -> jsoupService.checkAndAddToIndexPage(url, site));
+        sitesList.getSites().parallelStream().forEach(siteConfig -> {
+            if(url.contains(siteConfig.getUrl())) {
+                indexingExecutor = Executors.newSingleThreadExecutor();
+                MonitoringPageIndexing monitoring = new MonitoringPageIndexing(
+                        url,
+                        siteService, pageService,
+                        indexService, lemmaService, siteConfig);
+                indexingExecutor.execute(monitoring);
+            }
+        });
+
+        indexingExecutor.shutdown();
+
+
         return new IndexindResponse(true, null);
     }
 
+    private void deleteAllSites() {
+        indexService.deleteAllIndexes();
+        lemmaService.deleteAllLemmas();
+        pageService.deleteAllPages();
+        siteService.deleteAll();
+    }
+
 }
+
+
 
 
