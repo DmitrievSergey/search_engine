@@ -5,21 +5,9 @@ import lombok.Getter;
 import java.util.Optional;
 
 @Getter
-public class CustomInfoException extends RuntimeException{
-    private final int statusCode;
-    private final String url;
+public class CustomInfoException extends AbstractCustomException{
 
     public CustomInfoException(String message, int statusCode, String url) {
-        super(message + ". Status=" + statusCode + ", URL=[" + url + "]");
-        this.statusCode = statusCode;
-        this.url = url;
-    }
-
-    public int getStatusCode() {
-        return this.statusCode;
-    }
-
-    public String getUrl() {
-        return this.url;
+        super(message, statusCode, url);
     }
 }

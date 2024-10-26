@@ -42,8 +42,8 @@ logging:
     max-history: 10
 indexing-settings:
   sites:
-#    - url: https://www.playback.ru/
-#      name: PlayBack.Ru
+    - url: https://www.playback.ru/
+      name: PlayBack.Ru
 #    - url: https://volochek.life/
 #      name: Volochek.Life
 #    - url: https://radiomv.ru/

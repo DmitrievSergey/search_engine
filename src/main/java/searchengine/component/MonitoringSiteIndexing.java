@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import searchengine.config.SiteConfig;
 import searchengine.dto.exception.CustomInterruptException;
+import searchengine.dto.exception.CustomStopIndexingException;
 import searchengine.dto.statistics.IndexStatistic;
 import searchengine.dto.statistics.LemmaStatistic;
 import searchengine.dto.statistics.PageStatistic;
@@ -62,6 +63,9 @@ public class MonitoringSiteIndexing implements MonitoringService {
             forkJoinPool.shutdownNow();
             throw new CustomInterruptException(e.getMessage(), e.getStatusCode(), e.getUrl());
         }
+        catch (CustomStopIndexingException e) {
+            throw new CustomStopIndexingException(e.getMessage(), e);
+        }
         catch (Exception e) {
             e.printStackTrace();
         }
@@ -87,16 +91,14 @@ public class MonitoringSiteIndexing implements MonitoringService {
             logger.info("Завершили индексацию по сайту {} ", siteConfig.getName());
             pageStatisticList.clear();
             forkJoinPool.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-
-        catch (CustomInterruptException e) {
+            ForkJoinPool.commonPool().shutdown();
+            logger.info("Индексация завершилась {}", IndexingService.isIndexingRunning.get());
+        } catch(CustomStopIndexingException | CustomInterruptException e) {
+            logger.info("Мессага пр ексепшн " + e.getMessage());
             siteService.setFailedStatus(site, e.getMessage());
             forkJoinPool.shutdownNow();
-            Thread.currentThread().interrupt();
-            throw new InterruptedException();
-        }
-        catch (Exception e) {
+            throw new CustomStopIndexingException(e.getMessage(), e);
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -104,7 +106,10 @@ public class MonitoringSiteIndexing implements MonitoringService {
     }
 
     protected void getSiteIndex(SiteEntity site) throws InterruptedException {
-            if(!Thread.currentThread().isInterrupted()) {
+        if(IndexingService.isIndexingStopped.get()) {
+            throw new CustomStopIndexingException("Индексация остановлена пользователем.", new InterruptedException());
+        }
+        try {
                 logger.info("getSiteIndex - siteName {} Поток прерван {}", site.getName(), Thread.currentThread().isInterrupted());
 //                List<IndexStatistic> indexStatisticList = new CopyOnWriteArrayList<>();
                 List<IndexSearchEntity> indexSearchEntityList = new CopyOnWriteArrayList<>();
@@ -123,14 +128,13 @@ public class MonitoringSiteIndexing implements MonitoringService {
                 }
                 indexService.saveAll(indexSearchEntityList);
                 logger.info("Size index" + indexSearchEntityList.size());
-            } else {
-                throw new InterruptedException();
-
+            } catch (CustomStopIndexingException e) {
+                throw new CustomStopIndexingException(e.getMessage(), e);
             }
     }
 
     protected void getSiteLemmas(SiteEntity site) throws InterruptedException {
-        if(!Thread.currentThread().isInterrupted()) {
+        try {
             logger.info("getSiteLemmas - siteName {} Поток прерван {}", site.getName(), Thread.currentThread().isInterrupted());
             List<LemmaStatistic> lemmaStatisticList = lemmaService.getLemmaDTOStatistic(site);
             logger.info("Получили лист лемм {} ", lemmaStatisticList.size());
@@ -144,7 +148,9 @@ public class MonitoringSiteIndexing implements MonitoringService {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        } else throw new InterruptedException();
+        } catch (CustomStopIndexingException e) {
+            throw new CustomStopIndexingException(e.getMessage(), e);
+        }
 
     }
 
