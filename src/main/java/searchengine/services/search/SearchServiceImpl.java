@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import searchengine.dto.IndexDto;
 import searchengine.dto.search.SearchResponse;
@@ -196,61 +197,7 @@ public class SearchServiceImpl implements SearchService {
         return finalList;
     }
 
-//    private SearchResponse getSearchResponse(String query, String site, Pageable pageable) {
-//        SearchResponse searchResponse = new SearchResponse();
-//        boolean exist = !site.isEmpty() ? existsByQueryAndSite(query, site) : existsByQuery(query);
-//
-//        if (exist) {
-//            List<SearchEntity> data = getQueryResults(query, site, pageable);
-//            searchResponse.setData(data.parallelStream().map(SearchEntity::entityToStatistic).toList());
-//            searchResponse.setCount(getCount(query, site));
-//
-//            return searchResponse;
-//        }
-//
-//        List<SearchEntity> searchData = createSearchList(query, site);
-//
-//        if (searchData.isEmpty()) {
-//            searchResponse.setResult(false);
-//            searchResponse.setError(String.format(SearchResponse.EMPTY_RESULT, query));
-//            logger.info("In searchServiceImpl search: not found any pages for query - {}", query);
-//            return searchResponse;
-//        }
-//        if (!searchRepository.existsByQuery(query)) saveAll(searchData);
-//
-//        searchResponse.setCount(getCount(query, site));
-//        searchResponse.setData(getQueryResults(query, site, pageable)
-//                .parallelStream().map(SearchEntity::entityToStatistic).toList());
-//
-//        return searchResponse;
-//    }
 
-    private Integer getCount(String query, String site) {
-        logger.info("Size of site" + site.length());
-        return !site.isEmpty() ? searchRepository.findAllByQueryAndSite(query, site).size() :
-                searchRepository.findAllByQuery(query).size();
-    }
-
-    private List<SearchEntity> createSearchList(String query, String site) {
-        List<LemmaEntity> lemmas = lemmaService.getLemmasFromQuery(query, site);
-        logger.debug("Получили леммы {}", lemmas.size());
-        List<IndexSearchEntity> indexes = indexService.getIndexSearchesByLemmas(lemmas);
-        logger.debug("Получили индексы {}", indexes.size());
-        List<PageEntity> pages = pageService.getPagesByIds(indexes.stream().map(indexSearchEntity -> {
-            return indexSearchEntity.getPage().getId();
-        }).toList());
-        logger.debug(pages.toString());
-        logger.debug("Получили страницы {}", pages.size());
-        if (pages.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        List<SearchEntity> searchData = getSearchData(lemmas, pages, indexes);
-        logger.debug("Размер searchData - " + searchData);
-        searchData.forEach(s -> s.setQuery(query));
-
-        return searchData;
-    }
 
     private List<SearchEntity> getQueryResults(String query, String site, Pageable pageable) {
         return searchRepository.findAllByQueryAndSite(query, site, pageable).getContent();
@@ -274,56 +221,12 @@ public class SearchServiceImpl implements SearchService {
         return searchRepository.existsByQueryAndSite(query, site);
     }
 
-    private List<SearchEntity> getSearchData(List<LemmaEntity> lemmas, List<PageEntity> pages, List<IndexSearchEntity> indexes) {
-        logger.info("Зашли в getSearchData ");
-        List<SearchEntity> searchDataList = new ArrayList<>();
-        float maxRelevance = getMaxRelevance(pages, indexes);
-        String query = " ";
-        pages.parallelStream().forEach(page -> {
-            SiteEntity site = siteService.findSiteBySiteId(page.getSite().getId());
-//            SearchEntity search = new SearchEntity(
-//                    site.getUrl(),
-//                    site.getName(),
-//                    page.getPath().equals("/") ? "" : page.getPath(),
-//                    getTitle(page.getContent()),
-//                    snippetService.getSnippet(page, lemmas)
-//            );
-
-
-
-            //searchDataList.add(search);
-        });
-
-
-        return searchDataList.stream().sorted().toList();
-    }
 
     private String getTitle(String content) {
         return Jsoup.parse(content).title();
     }
 
-    private float getAbsolutRelevance(PageEntity page, List<IndexSearchEntity> indexes) {
-        return indexes.stream()
-                .filter(index -> index.getPage().equals(page))
-                .mapToInt(IndexSearchEntity::getRank)
-                .sum();
-    }
 
-
-    private float getMaxRelevance(List<PageEntity> pages, List<IndexSearchEntity> indexes) {
-        float maxRelevance = 0;
-
-        for (PageEntity page : pages) {
-            List<IndexSearchEntity> localIndexes = indexes.stream()
-                    .filter(i -> i.getPage().getId().equals(page.getId()))
-                    .toList();
-
-            float absolutRelevance = getAbsolutRelevance(page, localIndexes);
-            maxRelevance = Math.max(absolutRelevance, maxRelevance);
-        }
-
-        return maxRelevance;
-    }
 
     private IndexDto convertEntityToDto(IndexSearchEntity index){
         IndexDto indexDto = new IndexDto();
