@@ -2,6 +2,10 @@ package searchengine.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import searchengine.dto.IndexDto;
+import searchengine.services.search.SearchServiceImpl;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -12,7 +16,8 @@ import java.util.Objects;
 @Table(name = "`index`", indexes = {@Index(
         name = "page_id_list", columnList = "page_id"),
         @Index(name = "lemma_id_list", columnList = "lemma_id")})
-public class IndexSearchEntity implements Serializable {
+public class IndexSearchEntity implements Comparable<IndexSearchEntity> {
+    private static Logger logger = LoggerFactory.getLogger(IndexSearchEntity.class);
     @Id
     @Column(nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,16 +46,9 @@ public class IndexSearchEntity implements Serializable {
 
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        IndexSearchEntity that = (IndexSearchEntity) o;
-        return page.equals(that.page) && lemma.equals(that.lemma) && rank == that.rank;
-    }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(page, lemma, rank);
+    public int compareTo(IndexSearchEntity o) {
+        return this.getPage().compareTo(o.getPage());
     }
 }

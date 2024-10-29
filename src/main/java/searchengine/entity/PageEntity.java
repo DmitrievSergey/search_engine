@@ -22,7 +22,7 @@ import static java.lang.Integer.compare;
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"path", "site_id"})
         })
-public class PageEntity {
+public class PageEntity implements Comparable<PageEntity> {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Integer id;
@@ -42,5 +42,17 @@ public class PageEntity {
         this.path = path;
         this.responseCode = responseCode;
         this.content = content;
+    }
+
+    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
+    private List<IndexSearchEntity> index = new ArrayList<>();
+
+
+
+    @Override
+    public int compareTo(PageEntity o) {
+        Integer resPath = this.getPath().compareTo(o.getPath());
+        Integer resSite = this.getSite().getId().compareTo(o.getSite().getId());
+        return resPath.compareTo(resSite);
     }
 }

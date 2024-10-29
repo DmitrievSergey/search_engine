@@ -7,6 +7,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
+
+import java.util.List;
+
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
     @Query("select s from SiteEntity s where s.url = ?1")
@@ -16,4 +19,6 @@ public interface SiteRepository extends JpaRepository<SiteEntity, Integer> {
     @Transactional
     @Query(value = "TRUNCATE TABLE site", nativeQuery = true)
     void deleteAllSites();
+    @Query(value = "select s.* from site s where s.status = 'INDEXED'", nativeQuery = true)
+    List<SiteEntity> findSiteByStatusIndexed();
 }

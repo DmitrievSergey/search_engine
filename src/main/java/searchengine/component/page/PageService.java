@@ -24,4 +24,8 @@ public interface PageService<PageEntity> {
     void addToDB(List<PageStatistic> pageStatisticList, SiteEntity site);
 
     void save(PageEntity page);
+
+    List<PageEntity> findPagesByLemmaId(Integer lemmaId);
+
+    PageEntity getPageById(Integer pageId);
 }

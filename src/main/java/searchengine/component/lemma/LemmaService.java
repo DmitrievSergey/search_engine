@@ -11,10 +11,16 @@ import java.util.NavigableMap;
 
 public interface LemmaService {
     List<LemmaStatistic> getLemmaDTOStatistic(SiteEntity site);
+
     NavigableMap<String, Integer> getPageLemmas(PageEntity page);
+
     List<LemmaEntity> saveAll(List<LemmaEntity> lemmaList);
+
     Map<String, LemmaEntity> getAllBySite(SiteEntity site);
+
+    Map<SiteEntity, List<LemmaEntity>> getLemmasFromQuery(String query);
     List<LemmaEntity> getLemmasFromQuery(String query, String site);
+
     void deleteAllLemmas();
 
     void deleteLemmasByIds(List<Integer> lemmasIds);
