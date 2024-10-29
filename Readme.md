@@ -30,7 +30,7 @@
 ### Statistic
 - Формирование статистики
 
-##Components
+## Components
 ### Scrabbing
 - генерация заданий для получения ссылок
 
