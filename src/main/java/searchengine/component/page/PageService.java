@@ -15,7 +15,6 @@ public interface PageService<PageEntity> {
 
     void deleteAllPages();
 
-    List<PageEntity> getPagesByIds(List<Integer> pageIds);
 
     PageEntity checkLinkInDB(String url, SiteEntity site) throws URISyntaxException, MalformedURLException;
 
@@ -25,7 +24,6 @@ public interface PageService<PageEntity> {
 
     void save(PageEntity page);
 
-    List<PageEntity> findPagesByLemmaId(Integer lemmaId);
 
     PageEntity getPageById(Integer pageId);
 }

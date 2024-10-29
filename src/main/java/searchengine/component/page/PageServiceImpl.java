@@ -46,14 +46,6 @@ public class PageServiceImpl implements PageService<PageEntity> {
         pageRepository.deleteAllPages();
     }
 
-    @Override
-    public List<PageEntity> getPagesByIds(List<Integer> pageIds) {
-        List<PageEntity> pageEntityList = new CopyOnWriteArrayList<>();
-        pageIds.parallelStream().forEach(integer -> {
-            pageEntityList.add(pageRepository.findById(integer).orElseThrow());
-        });
-        return pageEntityList;
-    }
 
     @Override
     public PageEntity checkLinkInDB(String url, SiteEntity site) throws URISyntaxException, MalformedURLException {
@@ -90,11 +82,6 @@ public class PageServiceImpl implements PageService<PageEntity> {
     @Override
     public void save(PageEntity page) {
         pageRepository.save(page);
-    }
-
-    @Override
-    public List<PageEntity> findPagesByLemmaId(Integer lemmaId) {
-        return pageRepository.findPagesByLemmaId(lemmaId);
     }
 
     @Override
