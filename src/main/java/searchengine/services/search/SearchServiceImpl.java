@@ -56,6 +56,11 @@ public class SearchServiceImpl implements SearchService {
         return getSearchResponse(query, site, pageable);
     }
 
+    @Override
+    public void deleteSearchData() {
+        searchRepository.clearSearch();
+    }
+
     private SearchResponse getSearchResponse(String query, String site, Pageable pageable) {
         boolean exist = !site.isEmpty();
         if(exist) {

@@ -19,6 +19,7 @@ import searchengine.component.site.SiteService;
 import searchengine.component.index.IndexService;
 import searchengine.component.lemma.LemmaService;
 import searchengine.component.page.PageService;
+import searchengine.services.search.SearchService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ public class IndexingServiceImpl implements IndexingService {
     private final PageService<PageEntity> pageService;
     private final LemmaService lemmaService;
     private final IndexService indexService;
+    private final SearchService searchService;
 
     private List<Future<?>> siteRunnableList = new ArrayList<>();
 
@@ -47,7 +49,6 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse startIndexingAllSites() {
-        //TODO: Добавить удаление данных в поиске
         //Проверить статус индексации
         if (isIndexingRunning.get()) {
             return new IndexindResponse(false, IndexindResponse.INDEXING_ALREADY_BEGIN);
@@ -90,7 +91,6 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse startIndexingPage(String url) {
-        //TODO: добавить удаление данных по странице если есть
         if(IndexingService.isIndexingRunning.get()) {
             return new IndexindResponse(true, null);
         }
@@ -104,7 +104,9 @@ public class IndexingServiceImpl implements IndexingService {
                 MonitoringPageIndexing monitoring = new MonitoringPageIndexing(
                         url,
                         siteService, pageService,
-                        indexService, lemmaService, siteConfig);
+                        indexService, lemmaService, siteConfig,
+                        searchService
+                );
                 Future<?> future = indexingExecutor.submit(monitoring);
                 siteRunnableList.add(future);
             }
@@ -126,6 +128,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void deleteAllSites() {
+        searchService.deleteSearchData();
         indexService.deleteAllIndexes();
         lemmaService.deleteAllLemmas();
         pageService.deleteAllPages();
