@@ -7,8 +7,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SearchStatistic {
-    private String address;
+public class SearchStatistic implements Comparable<SearchStatistic> {
+    private String site;
     private String siteName;
     private String uri;
     private String title;
@@ -17,11 +17,16 @@ public class SearchStatistic {
 
     public SearchStatistic(String address, String siteName, String uri,
                             String title, String snippet, Float relevance) {
-        this.address = address;
+        this.site = address;
         this.siteName = siteName;
         this.uri = uri;
         this.title = title;
         this.snippet = snippet;
         this.relevance = relevance;
+    }
+
+    @Override
+    public int compareTo(SearchStatistic o) {
+        return o.getRelevance().compareTo(this.getRelevance());
     }
 }

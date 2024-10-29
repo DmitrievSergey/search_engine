@@ -3,6 +3,7 @@ package searchengine.repositories;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.IndexSearchEntity;
@@ -27,4 +28,16 @@ public interface IndexRepository extends JpaRepository<IndexSearchEntity, Long> 
     @Transactional
     @Query(value = "TRUNCATE TABLE `index`", nativeQuery = true)
     void deleteAllIndexes();
+    @Query(value = "select i.page_id from `index` i \n" +
+            "where lemma_id in (:values ) \n" +
+            "group by i.page_id\n" +
+            "having COUNT(i.page_id) > 1 \n" +
+            "order by i.page_id desc", nativeQuery = true)
+    List<Integer> getPageIdsWithQueryLemmas(@Param("values") List<Integer> values);
+
+    @Query(value ="select i.* from `index` i \n" +
+            "where i.page_id in (:values)" ,nativeQuery = true)
+    List<IndexSearchEntity> getIndexesByPageIds(@Param("values") List<Integer> values);
+    @Query("select i from IndexSearchEntity i where i.page.id = ?1 and i.lemma.id = ?2")
+    IndexSearchEntity getIndexByPageIdAndLemmaId(int pageId, int lemmaId);
 }

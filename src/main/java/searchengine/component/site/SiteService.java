@@ -3,6 +3,8 @@ package searchengine.component.site;
 import searchengine.config.SiteConfig;
 import searchengine.entity.SiteEntity;
 
+import java.util.List;
+
 public interface SiteService<SiteEntity> {
     SiteEntity findSiteByUrl(String url);
     SiteEntity save(SiteEntity site);
@@ -14,4 +16,6 @@ public interface SiteService<SiteEntity> {
     SiteEntity findSiteBySiteId(Integer id);
 
     SiteEntity addSiteData(SiteConfig siteConfig);
+
+    List<SiteEntity> findSitesWithStatusIndexed();
 }

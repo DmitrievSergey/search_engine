@@ -8,6 +8,7 @@ import searchengine.entity.Status;
 import searchengine.repositories.SiteRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +58,11 @@ public class SiteServiceImpl implements SiteService<SiteEntity>{
     public SiteEntity addSiteData(SiteConfig siteConfig) {
         SiteEntity site = new SiteEntity(Status.INDEXING, LocalDateTime.now(), null, siteConfig.getUrl(), siteConfig.getName());
         return save(site);
+    }
+
+    @Override
+    public List<SiteEntity> findSitesWithStatusIndexed() {
+        return siteRepository.findSiteByStatusIndexed();
     }
 
 }

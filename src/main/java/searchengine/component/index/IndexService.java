@@ -20,4 +20,8 @@ public interface IndexService {
     List<Integer> getLemmasIdsByPage(PageEntity page);
 
     void addPageIndexToDb(PageEntity page, Map<Integer, Integer> lemmaIdsAndFrequency);
+
+    List<IndexSearchEntity> getIndexSearchesByLemma(LemmaEntity orElseThrow);
+
+    IndexSearchEntity getIndexByPageIdAndLemmaId(int pageId, int lemmaId);
 }

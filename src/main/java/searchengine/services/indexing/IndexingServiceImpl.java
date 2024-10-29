@@ -47,6 +47,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse startIndexingAllSites() {
+        //TODO: Добавить удаление данных в поиске
         //Проверить статус индексации
         if (isIndexingRunning.get()) {
             return new IndexindResponse(false, IndexindResponse.INDEXING_ALREADY_BEGIN);
@@ -89,6 +90,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public IndexindResponse startIndexingPage(String url) {
+        //TODO: добавить удаление данных по странице если есть
         if(IndexingService.isIndexingRunning.get()) {
             return new IndexindResponse(true, null);
         }

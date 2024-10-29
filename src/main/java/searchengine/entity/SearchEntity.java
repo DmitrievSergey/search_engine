@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import searchengine.dto.statistics.SearchStatistic;
 
+import java.util.Objects;
+
 @Getter
 @Setter
 @Entity
@@ -27,15 +29,18 @@ public class SearchEntity implements Comparable<SearchEntity>{
     @Column(name = "snippet", columnDefinition = "TEXT", nullable = false)
     private String snippet;
     @Column(name = "relevance", nullable = false)
-    private float relevance;
+    private Float relevance;
 
-    public SearchEntity(String site, String siteName, String uri, String title, String snippet, float relevance) {
+    public SearchEntity(String query, String site, String siteName,
+                        String uri, String title, String snippet, Float relevance) {
+        this.query = query;
         this.site = site;
         this.siteName = siteName;
         this.uri = uri;
         this.title = title;
         this.snippet = snippet;
         this.relevance = relevance;
+
     }
 
     public SearchEntity() {
@@ -53,6 +58,7 @@ public class SearchEntity implements Comparable<SearchEntity>{
                 this.getRelevance()
         );
     }
+
 
     @Override
     public int compareTo(SearchEntity o) {

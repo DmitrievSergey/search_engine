@@ -15,7 +15,7 @@ import java.util.Objects;
 @Table(name = "lemma", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"lemma", "site_id"})
 })
-public class LemmaEntity implements Serializable {
+public class LemmaEntity implements Comparable<LemmaEntity> {
     @Id
     @Column(nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,22 +34,17 @@ public class LemmaEntity implements Serializable {
     @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
     private List<IndexSearchEntity> index = new ArrayList<>();
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        LemmaEntity lemma1 = (LemmaEntity) o;
-        return Objects.equals(site, lemma1.site) && Objects.equals(lemma, lemma1.lemma);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(site, lemma);
-    }
 
     public LemmaEntity(SiteEntity site, String lemma, int frequency) {
         this.site = site;
         this.lemma = lemma;
         this.frequency = frequency;
+    }
+
+    @Override
+    public int compareTo(LemmaEntity o) {
+        Integer th = this.getFrequency();
+        Integer og = o.getFrequency();
+        return th.compareTo(og);
     }
 }

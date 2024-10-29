@@ -21,7 +21,7 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
     List<LemmaEntity> findLemmaEntityBySite(int siteId);
 
     Long countBySite(SiteEntity site);
-
+    @Query(value = "select l.* from lemma l where l.lemma = ?1", nativeQuery = true)
     List<LemmaEntity> findAllByLemma(String lemma);
 
 

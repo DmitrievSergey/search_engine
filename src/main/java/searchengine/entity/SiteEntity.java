@@ -6,9 +6,7 @@ import lombok.*;
 
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static java.lang.Integer.compare;
 
@@ -19,7 +17,7 @@ import static java.lang.Integer.compare;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class SiteEntity{
+public class SiteEntity implements Comparable<SiteEntity>{
 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
@@ -39,8 +37,11 @@ public class SiteEntity{
 
     String name;
 
-//    @OneToMany(fetch = FetchType.LAZY, mappedBy = "site", cascade = CascadeType.ALL)
-//    protected List<PageEntity> pageList = new ArrayList<>();
+    @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Set<PageEntity> pageEntities = new HashSet<>();
+
+    @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Set<LemmaEntity> lemmaEntities = new HashSet<>();
 
     public SiteEntity(Status status, LocalDateTime statusTime, String lastError, String url, String name) {
         this.status = status;
@@ -49,6 +50,7 @@ public class SiteEntity{
         this.url = url;
         this.name = name;
     }
+
 
     @Override
     public String toString() {
@@ -60,5 +62,10 @@ public class SiteEntity{
                 ", url='" + url + '\'' +
                 ", name='" + name + '\'' +
                 '}';
+    }
+
+    @Override
+    public int compareTo(SiteEntity o) {
+        return this.getId().compareTo(o.getId());
     }
 }

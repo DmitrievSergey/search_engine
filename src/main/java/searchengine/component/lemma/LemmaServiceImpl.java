@@ -11,6 +11,7 @@ import searchengine.dto.statistics.LemmaStatistic;
 import searchengine.entity.LemmaEntity;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
+import searchengine.entity.Status;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.component.site.SiteService;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,40 +39,6 @@ public class LemmaServiceImpl implements LemmaService {
     private final MorphologyService morphologyService;
     private final SiteService<SiteEntity> siteService;
     private final PageRepository pageRepository;
-
-
-    private void createLemmasForPage(PageEntity page) {
-        NavigableMap<String, Integer> map = getPageLemmas(page);
-        if (map.isEmpty()) return;
-        String workDir = System.getProperty("user.dir") + File.separator +
-                page.getSite().getId() + File.separator;
-        File file = new File(workDir + page.getSite().getId() + "_" + page.getId() + ".txt");
-        logger.info("Начали запись лемм в файл для " + page.getId() + " " + page.getPath() + " " + page.getSite().getId());
-        String separator = "|";
-        StringBuilder stringBuilder = new StringBuilder();
-        for (Map.Entry<String, Integer> entry : map.entrySet()) {
-            stringBuilder.append(entry.getKey())
-                    .append(separator)
-                    .append(entry.getValue())
-                    .append(separator)
-                    .append(page.getId())
-                    .append(separator)
-                    .append(page.getSite().getId())
-                    .append("\n");
-
-            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(file.getPath()));) {
-                if (stringBuilder.length() > 1024) {
-                    writer.write(stringBuilder.toString());
-                } else {
-                    writer.write(stringBuilder.toString());
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        stringBuilder.delete(0, stringBuilder.length());
-        logger.info("завершили запись лемм в файл для  pageId = " + page.getId() + " " + page.getPath() + " " + page.getSite().getName());
-    }
 
 
     @Override
@@ -119,30 +87,60 @@ public class LemmaServiceImpl implements LemmaService {
 
         return lemmaFrequency;
     }
+    @Override
+    public Map<SiteEntity, List<LemmaEntity>> getLemmasFromQuery(String query) {
+        CopyOnWriteArrayList<LemmaEntity> queryLemmas = new CopyOnWriteArrayList<>();
+        List<String> normalForms = getNormalFormsForQuery(query);
+        List<SiteEntity> listIndexedSites = siteService.findSitesWithStatusIndexed();
+        //в таблице лемма ищем леммы по каждому сайту
+        Map<SiteEntity, List<LemmaEntity>> siteLemmasMap = new ConcurrentHashMap<>();
+        listIndexedSites.parallelStream().forEach(s -> {
+            CopyOnWriteArrayList<LemmaEntity> siteLemmas = new CopyOnWriteArrayList<>();
+            normalForms.parallelStream().forEach(n -> {
+                LemmaEntity siteLemma = lemmaRepository.findLemmaEntityByLemmaAndSiteId(n, s.getId());
+                if (siteLemma != null) siteLemmas.add(siteLemma);
+            });
+            siteLemmasMap.put(s,getSortedAndFilteredLemmas(siteLemmas));
+            siteLemmas.clear();
+            normalForms.clear();
+        });
+        // на выходе получаем наверное сортид мапу сайт - отсортированный список лемм и вес по сайтам
+
+    return siteLemmasMap;
+    }
+
+    private List<LemmaEntity> getSortedAndFilteredLemmas(List<LemmaEntity> lemmaList) {
+        float aLemma = getAverageFrequency(lemmaList) * 2;
+        return lemmaList.stream()
+                .sorted()
+                .filter(l -> l.getFrequency() < aLemma)
+                .toList();
+    }
+
+    private List<String> getNormalFormsForQuery(String query) {
+        CopyOnWriteArrayList<String> normalForms = new CopyOnWriteArrayList<>();
+        String[] words = query.split("\\s+");
+        Arrays.stream(words).parallel().forEach(s -> {
+            String normalForm = morphologyService.getNormalForm(s);
+            normalForms.add(normalForm);
+        });
+        return normalForms;
+    }
 
     @Override
     public List<LemmaEntity> getLemmasFromQuery(String query, String site) {
         CopyOnWriteArrayList<LemmaEntity> queryLemmas = new CopyOnWriteArrayList<>();
         String[] words = query.split("\\s+");
-        if (site.isEmpty()) {
-            Arrays.stream(words).parallel().forEach(s -> {
-                String normalForm = morphologyService.getNormalForm(s);
-                if (!normalForm.isEmpty()) {
-                    queryLemmas.addAll(lemmaRepository.findAllByLemma(normalForm));
-                }
-            });
-        } else {
-            SiteEntity siteEntity = siteService.findSiteByUrl(site);
-            if (siteEntity == null) return Collections.emptyList();
-            Arrays.stream(words).parallel().forEach(s -> {
-                String normalForm = morphologyService.getNormalForm(s);
-                if (!normalForm.isEmpty()) {
-                    queryLemmas.add(
-                            lemmaRepository.findLemmaEntityByLemmaAndSiteId(normalForm, siteEntity.getId())
-                    );
-                }
-            });
-        }
+
+        SiteEntity siteEntity = siteService.findSiteByUrl(site);
+        Arrays.stream(words).parallel().forEach(s -> {
+            String normalForm = morphologyService.getNormalForm(s);
+            if (!normalForm.isEmpty()) {
+                queryLemmas.add(
+                        lemmaRepository.findLemmaEntityByLemmaAndSiteId(normalForm, siteEntity.getId())
+                );
+            }
+        });
         try {
             return queryLemmas.stream()
                     .filter(l -> l.getFrequency() < getAverageFrequency(queryLemmas) * 2)
@@ -162,7 +160,7 @@ public class LemmaServiceImpl implements LemmaService {
     public void deleteLemmasByIds(List<Integer> lemmasIds) {
         lemmasIds.parallelStream().forEach(i -> {
             LemmaEntity lemma = lemmaRepository.findById(i);
-            if(lemma.getFrequency() > 1) {
+            if (lemma.getFrequency() > 1) {
                 lemma.setFrequency(lemma.getFrequency() - 1);
                 lemmaRepository.save(lemma);
             } else {
@@ -177,11 +175,11 @@ public class LemmaServiceImpl implements LemmaService {
         Map<String, Integer> map = getPageLemmas(page);
         Map<Integer, Integer> lemmasIdsAndFrequency = new HashMap<>();
         List<LemmaEntity> lemmaList = new ArrayList<>();
-        for(Map.Entry<String, Integer> entry : map.entrySet()) {
+        for (Map.Entry<String, Integer> entry : map.entrySet()) {
             LemmaEntity lemma = lemmaRepository.findLemmaEntityByLemmaAndSiteId(
                     entry.getKey()
                     , site.getId());
-            if(lemma == null) {
+            if (lemma == null) {
                 LemmaEntity newLemma = new LemmaEntity(
                         site,
                         entry.getKey(),
@@ -220,7 +218,7 @@ public class LemmaServiceImpl implements LemmaService {
 
 
     private int getAverageFrequency(List<LemmaEntity> lemmas) throws NullPointerException {
-        if(lemmas.isEmpty()) throw new NullPointerException();
+        if (lemmas.isEmpty()) throw new NullPointerException();
         int sumFrequency = 0;
 
         for (LemmaEntity lemma : lemmas) {

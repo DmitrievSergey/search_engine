@@ -84,4 +84,16 @@ public class IndexServiceImpl implements IndexService {
         indexRepository.saveAll(indexList);
 
     }
+
+
+    @Override
+    public List<IndexSearchEntity> getIndexSearchesByLemma(LemmaEntity lemma) {
+        return indexRepository.findAllByLemma(lemma);
+    }
+
+    @Override
+    public IndexSearchEntity getIndexByPageIdAndLemmaId(int pageId, int lemmaId) {
+        return indexRepository.getIndexByPageIdAndLemmaId(pageId, lemmaId);
+    }
+
 }

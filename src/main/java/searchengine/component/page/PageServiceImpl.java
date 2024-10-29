@@ -92,6 +92,17 @@ public class PageServiceImpl implements PageService<PageEntity> {
         pageRepository.save(page);
     }
 
+    @Override
+    public List<PageEntity> findPagesByLemmaId(Integer lemmaId) {
+        return pageRepository.findPagesByLemmaId(lemmaId);
+    }
+
+    @Override
+    public PageEntity getPageById(Integer p) {
+
+        return pageRepository.findById(p).orElseThrow();
+    }
+
     private String getPathFromUrl(String url) throws URISyntaxException, MalformedURLException {
         return new URI(url).toURL().getPath();
     }
