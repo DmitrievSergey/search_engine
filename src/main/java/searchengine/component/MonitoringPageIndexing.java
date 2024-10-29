@@ -16,6 +16,7 @@ import searchengine.dto.statistics.PageStatistic;
 import searchengine.entity.PageEntity;
 import searchengine.entity.SiteEntity;
 import searchengine.services.indexing.IndexingService;
+import searchengine.services.search.SearchService;
 
 
 import java.net.URI;
@@ -26,6 +27,7 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
     private static Logger logger = LoggerFactory.getLogger(MonitoringPageIndexing.class);
 
     private final String url;
+    private final SearchService searchService;
     private final SiteService<SiteEntity> siteService;
     private final PageService<PageEntity> pageService;
     private final IndexService indexService;
@@ -33,13 +35,15 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
     private final SiteConfig siteConfig;
 
     public MonitoringPageIndexing(String url, SiteService<SiteEntity> siteService, PageService<PageEntity> pageService,
-                                  IndexService indexService, LemmaService lemmaService, SiteConfig siteConfig) {
+                                  IndexService indexService, LemmaService lemmaService, SiteConfig siteConfig,
+                                  SearchService searchService) {
         this.url = url;
         this.siteService = siteService;
         this.pageService = pageService;
         this.indexService = indexService;
         this.lemmaService = lemmaService;
         this.siteConfig = siteConfig;
+        this.searchService = searchService;
 
     }
 
@@ -90,10 +94,12 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
     }
 
     private void deletePageData(PageEntity page) {
+        searchService.deleteSearchData();
         List<Integer> lemmasId = indexService.getLemmasIdsByPage(page);
         indexService.deleteByPageEntity(page);
         lemmaService.deleteLemmasByIds(lemmasId);
         pageService.deletePage(page);
+
     }
 
     @SneakyThrows
