@@ -51,17 +51,42 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
         SiteEntity site = siteService.findSiteByUrl(siteConfig.getUrl());
         if (site == null) {
             logger.info(" Добавляем данные по сайту {} ", siteConfig.getUrl());
-            site = siteService.addSiteData(siteConfig);
+            try {
+                site = siteService.setIndexingStatus(siteConfig);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            IndexingService.isIndexingRunning.set(true);
             logger.info(" Добавили данные по сайту {} ", siteConfig.getUrl());
+        } else {
+
+            try {
+                logger.info("Нашли сайт {} c id {}", site.getName(), site.getId());
+                siteService.setIndexingStatus(site);
+                logger.info("Выставили статус {}  сайту {} c id {}", site.getStatus(), site.getName(), site.getId());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            IndexingService.isIndexingRunning.set(true);
+            logger.info("Выставили статус индексации в {}", IndexingService.isIndexingRunning.get());
         }
+
 
         try {
             PageEntity page = pageService.checkLinkInDB(url, site);
-            if(page != null) deletePageData(page);
+            if(page != null) {
+                logger.info("Нашли данные по странице {} сайта {} c id {}", page.getPath(), site.getName(), site.getId());
+                logger.info("Удаляем данные по странице {} сайта {}", page.getPath(), site.getName());
+                deletePageData(page);
+                logger.info("Удалили данные по странице {} сайта {}", page.getPath(), site.getName());
+            }
+
+            logger.info("Забираем контент страницы {} сайта {}", page.getPath(), site.getName());
             PageStatistic pageStatistic = getPageData(url);
             String pagePath = new URI(pageStatistic.getUrl()).getPath();
             page = new PageEntity(site, pagePath, pageStatistic.getCode(),  pageStatistic.getContent());
-            logger.debug("Получили контент страницы " + pageStatistic);
+            logger.info("Получили контент страницы " + pageStatistic);
             pageService.save(page);
             if (pageStatistic.getCode() >= 400) throw new CustomInterruptException(
                     CustomInterruptException.PAGE_UNREACHABLE,
@@ -70,11 +95,14 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
             );
             Map<Integer, Integer> lemmaIdsAndFrequency;
             try {
+                logger.info("Формируем леммы по странице" + page.getPath());
                 lemmaIdsAndFrequency = lemmaService.addPageLemmaToDb(page, site);
+                logger.info("Добавили леммы по странице в бд" + page.getPath());
+                logger.info("Формируем индексы по странице" + page.getPath());
                 indexService.addPageIndexToDb(page, lemmaIdsAndFrequency);
+                logger.info("Добавили индексы по странице в бд" + page.getPath());
                 siteService.setIndexedStatus(site);
                 logger.info("Завершили индексацию по странице {} сайта {} ", url, siteConfig.getName());
-                logger.info("Индексация завершилась {}", IndexingService.isIndexingRunning.get());
                 ForkJoinPool.commonPool().shutdown();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -92,6 +120,7 @@ public class MonitoringPageIndexing implements MonitoringService, JsoupConnectio
 
 
     }
+
 
     private void deletePageData(PageEntity page) {
         searchService.deleteSearchData();

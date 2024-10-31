@@ -1,7 +1,10 @@
 package searchengine.component.site;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import searchengine.component.MonitoringPageIndexing;
 import searchengine.config.SiteConfig;
 import searchengine.entity.SiteEntity;
 import searchengine.entity.Status;
@@ -13,6 +16,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class SiteServiceImpl implements SiteService<SiteEntity>{
+    private static Logger logger = LoggerFactory.getLogger(SiteServiceImpl.class);
     private final SiteRepository siteRepository;
     @Override
     public SiteEntity findSiteByUrl(String url) {
@@ -22,8 +26,20 @@ public class SiteServiceImpl implements SiteService<SiteEntity>{
     @Override
     public SiteEntity save(SiteEntity site) {
         site.setStatusTime(LocalDateTime.now());
+        logger.info("Begin flush ");
         siteRepository.flush();
-        return siteRepository.save(site);
+        logger.info("End flush ");
+        logger.info("Begin save site ");
+        SiteEntity siteEntity = null;
+        try {
+            siteEntity = siteRepository.save(site);
+            logger.info("End save site ");
+            return siteEntity;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return siteEntity;
+
     }
 
     @Override
@@ -55,8 +71,14 @@ public class SiteServiceImpl implements SiteService<SiteEntity>{
         return siteRepository.findById(id).orElseThrow();
     }
     @Override
-    public SiteEntity addSiteData(SiteConfig siteConfig) {
+    public SiteEntity setIndexingStatus(SiteConfig siteConfig) {
         SiteEntity site = new SiteEntity(Status.INDEXING, LocalDateTime.now(), null, siteConfig.getUrl(), siteConfig.getName());
+        return save(site);
+    }
+
+    @Override
+    public SiteEntity setIndexingStatus(SiteEntity site) {
+        site.setStatus(Status.INDEXING);
         return save(site);
     }
 

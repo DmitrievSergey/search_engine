@@ -1,6 +1,5 @@
 package searchengine.component;
 
-import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Component;
 import searchengine.config.SiteConfig;
 import searchengine.dto.exception.CustomInterruptException;
 import searchengine.dto.exception.CustomStopIndexingException;
-import searchengine.dto.statistics.IndexStatistic;
 import searchengine.dto.statistics.LemmaStatistic;
 import searchengine.dto.statistics.PageStatistic;
 import searchengine.entity.*;
@@ -20,10 +18,6 @@ import searchengine.services.indexing.IndexingService;
 import searchengine.component.page.PageService;
 import searchengine.component.scrabbing.LinkProcessor;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -79,14 +73,19 @@ public class MonitoringSiteIndexing implements MonitoringService {
             logger.debug("Данные по сайту {} удалены ", siteConfig.getUrl());
         }
         logger.info(" Добавляем данные по сайту {} ", siteConfig.getUrl());
-        SiteEntity site = siteService.addSiteData(siteConfig);
+        SiteEntity site = siteService.setIndexingStatus(siteConfig);
         logger.info(" Добавили данные по сайту {} ", siteConfig.getUrl());
         try {
             List<PageStatistic> pageStatisticList = getPageList(site.getUrl());
-            logger.debug("Получили список ссылок " + pageStatisticList);
+            logger.debug("Получили список ссылок, добавляем в бд " + pageStatisticList);
             pageService.addToDB(pageStatisticList, site);
+            logger.debug("Добавили список ссылок в бд по сайту {} ", site.getName());
+            logger.debug("Начали формировать леммы по сайту {} ", site.getName());
             getSiteLemmas(site);
+            logger.debug("Добавили список лемм в бд по сайту {} ", site.getName());
+            logger.debug("Наади формировать индекс по сайту {} ", site.getName());
             getSiteIndex(site);
+            logger.debug("Добавили индексы в бд по сайту {} ", site.getName());
             siteService.setIndexedStatus(site);
             logger.info("Завершили индексацию по сайту {} ", siteConfig.getName());
             pageStatisticList.clear();

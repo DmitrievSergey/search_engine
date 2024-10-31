@@ -17,7 +17,7 @@ spring:
           batch_versioned_data: true
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: OFF
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.xml
     enabled: true
@@ -25,17 +25,17 @@ logging:
   level:
     org:
       springframework:
-        cache: DEBUG
+        cache: OFF
       hibernate:
         orm:
           jdbc:
-            query: TRACE
-            bind: TRACE
-        SQL: TRACE
+            query: OFF
+            bind: OFF
+        SQL: OFF
         type:
           descriptor:
             sql:
-              BasicBinder: TRACE
+              BasicBinder: OFF
   file:
     name: logs/myapp.log
     max-size: 10MB

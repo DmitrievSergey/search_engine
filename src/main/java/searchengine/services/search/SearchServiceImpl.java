@@ -59,6 +59,7 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public void deleteSearchData() {
+
         searchRepository.clearSearch();
     }
 

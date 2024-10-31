@@ -15,7 +15,10 @@ public interface SiteService<SiteEntity> {
 
     SiteEntity findSiteBySiteId(Integer id);
 
-    SiteEntity addSiteData(SiteConfig siteConfig);
+    SiteEntity setIndexingStatus(SiteConfig siteConfig);
+
+    SiteEntity setIndexingStatus(SiteEntity site);
 
     List<SiteEntity> findSitesWithStatusIndexed();
+
 }

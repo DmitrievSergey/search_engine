@@ -41,7 +41,7 @@ public class SiteEntity implements Comparable<SiteEntity>{
     private Set<PageEntity> pageEntities = new HashSet<>();
 
     @OneToMany(mappedBy = "site", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private Set<LemmaEntity> lemmaEntities = new HashSet<>();
+    private List<LemmaEntity> lemmaEntities = new ArrayList<>();
 
     public SiteEntity(Status status, LocalDateTime statusTime, String lastError, String url, String name) {
         this.status = status;
