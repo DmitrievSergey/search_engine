@@ -185,16 +185,18 @@ public class LemmaServiceImpl implements LemmaService {
                         entry.getKey(),
                         entry.getValue()
                 );
-                lemmaList.add(newLemma);
+                //lemmaList.add(newLemma);
+                newLemma = lemmaRepository.save(newLemma);
                 lemmasIdsAndFrequency.put(newLemma.getId(), entry.getValue());
             } else {
                 lemma.setFrequency(lemma.getFrequency() + 1);
-                lemmaList.add(lemma);
+                lemmaRepository.save(lemma);
+                //lemmaList.add(lemma);
                 lemmasIdsAndFrequency.put(lemma.getId(), entry.getValue());
             }
         }
-        lemmaRepository.saveAll(lemmaList);
-        lemmaList.clear();
+        //saveAll(lemmaList);
+        //lemmaList.clear();
         return lemmasIdsAndFrequency;
     }
 
@@ -227,4 +229,5 @@ public class LemmaServiceImpl implements LemmaService {
 
         return sumFrequency / lemmas.size();
     }
+
 }

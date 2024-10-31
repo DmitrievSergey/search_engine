@@ -1,7 +1,11 @@
 package searchengine.component.index;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import searchengine.component.index.IndexService;
+import searchengine.component.lemma.LemmaServiceImpl;
 import searchengine.entity.IndexSearchEntity;
 import searchengine.entity.LemmaEntity;
 import searchengine.entity.PageEntity;
@@ -17,6 +21,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 public class IndexServiceImpl implements IndexService {
+    private static Logger logger = LoggerFactory.getLogger(IndexServiceImpl.class);
+
     private final IndexRepository indexRepository;
     private final LemmaService lemmaService;
     private final PageRepository pageRepository;
@@ -59,7 +65,7 @@ public class IndexServiceImpl implements IndexService {
         try {
             indexRepository.flush();
             indexRepository.saveAll(indexList);
-        } catch(Exception e) {
+        } catch(DataIntegrityViolationException e) {
             e.printStackTrace();
         }
     }
@@ -73,15 +79,24 @@ public class IndexServiceImpl implements IndexService {
     public void addPageIndexToDb(PageEntity page, Map<Integer, Integer> lemmaIdsAndFrequency) {
         List<IndexSearchEntity> indexList = new ArrayList<>();
         for(Map.Entry<Integer, Integer> entry : lemmaIdsAndFrequency.entrySet()) {
+            logger.info("Entry lemmaId {} frequency {}", entry.getKey(), entry.getValue());
             LemmaEntity entity = lemmaService.getLemmaById(entry.getKey());
+            logger.info("LemmaEntity = {}", entity.getLemma());
             IndexSearchEntity index = new IndexSearchEntity(
                     page,
                     entity,
                     entry.getValue()
                     );
-            indexList.add(index);
+            //indexList.add(index);
+            try {
+                indexRepository.save(index);
+            } catch (DataIntegrityViolationException e) {
+                e.printStackTrace();
+                logger.info("Получили ошибку на индексе {}", index.getLemma());
+            }
         }
-        indexRepository.saveAll(indexList);
+
+        //saveAll(indexList);
 
     }
 

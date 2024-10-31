@@ -33,6 +33,7 @@ public class MonitoringIndexingStatus implements Runnable {
             }
         }
         IndexingService.isIndexingRunning.set(false);
+        logger.info("Индексация в процессе {}", IndexingService.isIndexingRunning.get());
     }
 
     @Override

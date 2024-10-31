@@ -81,6 +81,7 @@ public class PageServiceImpl implements PageService<PageEntity> {
 
     @Override
     public void save(PageEntity page) {
+        pageRepository.flush();
         pageRepository.save(page);
     }
 

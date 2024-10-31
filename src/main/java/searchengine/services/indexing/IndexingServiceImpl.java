@@ -92,11 +92,11 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public IndexindResponse startIndexingPage(String url) {
         if(IndexingService.isIndexingRunning.get()) {
-            return new IndexindResponse(true, null);
+            return new IndexindResponse(false, IndexindResponse.INDEXING_ALREADY_BEGIN);
         }
         IndexingService.isIndexingRunning.set(true);
         AtomicBoolean isCorrectUrl = checkUrl(url);
-        if(!isCorrectUrl.get()) new IndexindResponse(true, IndexindResponse.PAGE_OUT_OF_SITES_CONFIG);
+        if(!isCorrectUrl.get()) new IndexindResponse(false, IndexindResponse.PAGE_OUT_OF_SITES_CONFIG);
         sitesList.getSites().parallelStream().forEach(siteConfig -> {
             if(url.contains(siteConfig.getUrl())) {
                 statusExecutor = Executors.newSingleThreadExecutor();
@@ -111,8 +111,9 @@ public class IndexingServiceImpl implements IndexingService {
                 siteRunnableList.add(future);
             }
         });
-        statusExecutor.execute(new MonitoringIndexingStatus(siteRunnableList, 1));
+
         indexingExecutor.shutdown();
+        statusExecutor.execute(new MonitoringIndexingStatus(siteRunnableList, 1));
         statusExecutor.shutdown();
 
 
